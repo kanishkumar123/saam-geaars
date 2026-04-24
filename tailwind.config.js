@@ -7,7 +7,7 @@ export default {
         industrial: {
           900: "#111827",
           800: "#1f2937",
-          accent: "#f97316", // A safety orange for contrast
+          accent: "#f97316",
         },
       },
     },

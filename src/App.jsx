@@ -1,4 +1,16 @@
-import { useRef, useMemo, useState } from "react";
+// App.jsx — Saam Geaars v5
+// All 10 requested changes applied:
+// 1. Hero full-width + engaging lower block (3 capability cards + violet stat bar)
+// 2. Marquee: gear/gearbox terms only
+// 3. Gears visible through most sections; blur only on About, Contact
+// 4. Certifications shimmer: hover-only (in CertificationsBadges.jsx)
+// 5. WhySaam section removed
+// 6. Process chips removed
+// 7. Engineering Output left-aligned
+// 8. Infrastructure left-aligned (in GalleryLightbox.jsx)
+// 9. SimpleContactForm with real web3forms key
+// 10. About reworked: quote-style, horizontal timeline, MD card
+import { useRef, useMemo } from "react";
 import * as THREE from "three";
 import { motion, useScroll, useSpring } from "framer-motion";
 import { Canvas, useFrame } from "@react-three/fiber";
@@ -8,25 +20,73 @@ import {
   Mail,
   Phone,
   MapPin,
-  Calculator,
   Target,
   CheckCircle2,
-  Factory,
-  Cog,
   Cpu,
   Crosshair,
   Flame,
   Activity,
-  Send,
-  CheckCircle,
-  Loader2,
-  Image as ImageIcon,
+  ArrowRight,
+  Zap,
+  Shield,
+  Clock,
 } from "lucide-react";
 
-// ==========================================
-// 3D GEOMETRY SETTINGS
-// ==========================================
-const defaultExtrudeSettings = {
+import ActiveNav from "./components/ActiveNav";
+import { ThemeProvider } from "./components/ThemeContext";
+import { StructuredData } from "./components/StructuredDataAndMetaTags";
+import {
+  GrainOverlay,
+  SectionDivider,
+  GoogleMap,
+} from "./components/GoogleMapGrainDivider";
+import ScrollProgressBar from "./components/ScrollProgressBar";
+import {
+  CustomCursor,
+  MagneticButton,
+} from "./components/CustomCursorAndMagnetic";
+import WhatsAppButton from "./components/WhatsAppButton";
+import AnimatedHeading from "./components/AnimatedHeading";
+import FadeIn from "./components/FadeIn";
+import AnimatedCounter from "./components/AnimatedCounter";
+import {
+  IndustryMarquee,
+  StatsBanner,
+} from "./components/IndustryMarqueeAndStatsBanner";
+import { CertificationsBadges } from "./components/CertificationsBadges";
+import TestimonialsCarousel from "./components/TestimonialsCarousel";
+import ProductFlipCards from "./components/ProductFlipCards";
+import { GalleryLightbox } from "./components/GalleryLightbox";
+import SimpleContactForm from "./components/SimpleContactForm";
+
+// ── Reusable section shell ────────────────────────────────────────
+// blurred=true: frosted glass so gears peek through softly
+// blurred=false: fully transparent — gears fully visible
+function SectionShell({ id, children, blurred = false, style = {} }) {
+  return (
+    <section
+      id={id}
+      style={{
+        position: "relative",
+        borderTop: "1px solid var(--border-1)",
+        background: blurred
+          ? "color-mix(in srgb, var(--bg-section) 80%, transparent)"
+          : "transparent",
+        backdropFilter: blurred ? "blur(16px) saturate(1.3)" : "none",
+        WebkitBackdropFilter: blurred ? "blur(16px) saturate(1.3)" : "none",
+        transition: "background 0.4s",
+        ...style,
+      }}
+    >
+      {children}
+    </section>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 3D GEAR MODEL
+// ═══════════════════════════════════════════════════════════════════
+const extrudeSettings = {
   depth: 0.6,
   bevelEnabled: true,
   bevelSegments: 3,
@@ -35,321 +95,1033 @@ const defaultExtrudeSettings = {
   bevelThickness: 0.05,
 };
 
-function createGearShape(teeth, outerRadius, innerRadius, holeRadius) {
+function createGearShape(teeth, outerR, innerR, holeR) {
   const shape = new THREE.Shape();
-  const numPoints = teeth * 4;
-  const angleStep = (Math.PI * 2) / numPoints;
-
-  for (let i = 0; i < numPoints; i++) {
-    const isOuterTooth = i % 4 === 1 || i % 4 === 2;
-    const radius = isOuterTooth ? outerRadius : innerRadius;
-    const x = Math.cos(i * angleStep) * radius;
-    const y = Math.sin(i * angleStep) * radius;
-
-    if (i === 0) shape.moveTo(x, y);
-    else shape.lineTo(x, y);
+  const n = teeth * 4;
+  const step = (Math.PI * 2) / n;
+  for (let i = 0; i < n; i++) {
+    const r = i % 4 === 1 || i % 4 === 2 ? outerR : innerR;
+    if (i === 0) shape.moveTo(Math.cos(i * step) * r, Math.sin(i * step) * r);
+    else shape.lineTo(Math.cos(i * step) * r, Math.sin(i * step) * r);
   }
-
-  const holePath = new THREE.Path();
-  holePath.absarc(0, 0, holeRadius, 0, Math.PI * 2, false);
-  shape.holes.push(holePath);
-
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, holeR, 0, Math.PI * 2, false);
+  shape.holes.push(hole);
   return shape;
 }
 
-function ProceduralGear({ teeth, radius, ...props }) {
-  const shape = useMemo(() => {
-    return createGearShape(teeth, radius, radius - 0.4, radius * 0.3);
-  }, [teeth, radius]);
-
+function ProceduralGear({ teeth, radius, color = "#8c9196", ...props }) {
+  const shape = useMemo(
+    () => createGearShape(teeth, radius, radius - 0.4, radius * 0.3),
+    [teeth, radius],
+  );
   return (
     <mesh {...props} castShadow receiveShadow>
-      <extrudeGeometry args={[shape, defaultExtrudeSettings]} />
-      <meshStandardMaterial color="#8c9196" metalness={0.9} roughness={0.25} />
+      <extrudeGeometry args={[shape, extrudeSettings]} />
+      <meshStandardMaterial color={color} metalness={0.9} roughness={0.25} />
     </mesh>
   );
 }
 
 function GearboxModel({ scrollProgress }) {
-  const largeGearRef = useRef();
-  const smallGearRef = useRef();
-
+  const largeRef = useRef();
+  const smallRef = useRef();
   useFrame(() => {
-    if (largeGearRef.current && smallGearRef.current) {
-      const baseRotation = scrollProgress.get() * Math.PI * 2;
-      largeGearRef.current.rotation.z = baseRotation;
-      smallGearRef.current.rotation.z = -(baseRotation * 2) + 0.314;
+    if (largeRef.current && smallRef.current) {
+      const r = scrollProgress.get() * Math.PI * 2;
+      largeRef.current.rotation.z = r;
+      smallRef.current.rotation.z = -(r * 2) + 0.314;
     }
   });
-
   return (
     <group rotation={[Math.PI / 4, Math.PI / 6, 0]}>
-      <group ref={largeGearRef}>
+      <group ref={largeRef}>
         <ProceduralGear teeth={20} radius={3} position={[0, 0, -0.3]} />
       </group>
-      <group ref={smallGearRef} position={[4.1, 0, 0]}>
-        <ProceduralGear teeth={10} radius={1.5} position={[0, 0, -0.3]} />
+      <group ref={smallRef} position={[4.1, 0, 0]}>
+        <ProceduralGear
+          teeth={10}
+          radius={1.5}
+          position={[0, 0, -0.3]}
+          color="#403587"
+        />
       </group>
     </group>
   );
 }
 
-// ==========================================
-// VERTICAL STACKING JOURNEY
-// ==========================================
-function ManufacturingJourney() {
-  const steps = [
-    {
-      id: "01",
-      title: "Engineering",
-      desc: "Design and blueprinting backed by insightful engineering experts. Every parameter is mapped for maximal kinetic efficiency before manufacturing begins.",
-      icon: Cpu,
-      stats: [
-        { label: "Tolerance", value: "±0.001mm" },
-        { label: "Environment", value: "3D CAD / CAM" },
-      ],
-    },
-    {
-      id: "02",
-      title: "CNC Machining",
-      desc: "Precision cutting in our well-furnished 9500 Sq Ft facility. We operate high-configured machinery capable of milling the most complex geometries.",
-      icon: Crosshair,
-      stats: [
-        { label: "Output Area", value: "9500 Sq Ft." },
-        { label: "Machinery", value: "5-Axis CNC" },
-      ],
-    },
-    {
-      id: "03",
-      title: "Heat Treatment",
-      desc: "Hardened and profile ground gears undergo intense metallurgical conditioning. This ensures they can handle extreme industrial torque without structural fatigue.",
-      icon: Flame,
-      stats: [
-        { label: "Core Process", value: "Carburizing" },
-        { label: "Material", value: "High-Tensile Steel" },
-      ],
-    },
-    {
-      id: "04",
-      title: "Quality Assurance",
-      desc: "Rigorous testing to ensure zero-defect kinetic transfer. Every gearbox and sprocket is tested against its absolute breaking limits before shipping.",
-      icon: Activity,
-      stats: [
-        { label: "Inspection", value: "Ultrasonic / Mag" },
-        { label: "Defects", value: "Zero-Slip Guarantee" },
-      ],
-    },
+// ═══════════════════════════════════════════════════════════════════
+// HERO — full-width, arrow bullet, engaging lower block
+// ═══════════════════════════════════════════════════════════════════
+function HeroSection() {
+  const capabilities = [
+    { icon: Zap, label: "5-Axis CNC", sub: "Complex gear geometries" },
+    { icon: Shield, label: "±0.001 mm", sub: "Profile ground tolerance" },
+    { icon: Clock, label: "7–10 Days", sub: "Custom turnaround time" },
   ];
 
   return (
+    // Transparent — gears fully visible behind hero
     <section
-      id="process"
-      className="py-32 px-6 relative z-20 max-w-5xl mx-auto"
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        padding: "300px 1.5rem 4rem",
+      }}
     >
-      <div className="text-center mb-24">
-        <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-6">
-          The Saam <br />
-          <span className="text-orange-600">Process</span>
-        </h2>
-        <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-          With state-of-the-art equipment and highly configured machinery, our
-          manufacturing pipeline is designed for absolute precision.
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-24 pb-32">
-        {steps.map((step, index) => (
+      <div style={{ maxWidth: "1280px", margin: "0 auto", width: "100%" }}>
+        {/* Eyebrow */}
+        <FadeIn delay={0}>
           <div
-            key={index}
-            className="sticky w-full bg-[#0a0a0a]/90 backdrop-blur-md border border-white/10 p-8 md:p-12 rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.8)] relative group hover:border-orange-500/50 transition-all duration-500 overflow-hidden"
-            style={{ top: `calc(15vh + ${index * 2}rem)` }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "16px",
+              marginBottom: "2rem",
+            }}
           >
-            <div className="absolute right-4 -bottom-4 text-[10rem] font-black text-white/[0.02] group-hover:text-orange-500/[0.05] transition-all duration-700 pointer-events-none select-none">
-              {step.id}
+            <div
+              style={{
+                height: "2px",
+                width: "52px",
+                background: "var(--brand)",
+                borderRadius: "1px",
+              }}
+            />
+            <span
+              style={{
+                color: "var(--brand)",
+                fontFamily: "monospace",
+                fontSize: "14px",
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+                fontWeight: 600,
+              }}
+            >
+              Est. 2001 · Coimbatore, India
+            </span>
+          </div>
+        </FadeIn>
+
+        {/* H1 — truly large, full viewport feel */}
+        <AnimatedHeading
+          text={["Insightful", "Engineering."]}
+          highlight="Engineering."
+          as="h1"
+          style={{
+            fontSize: "clamp(4.5rem, 12vw, 9.5rem)",
+            fontWeight: 900,
+            textTransform: "uppercase",
+            letterSpacing: "-0.05em",
+            lineHeight: 0.86,
+            marginBottom: "2.5rem",
+            color: "var(--text-1)",
+          }}
+          stagger={0.09}
+        />
+
+        {/* Subtext with violet arrow bullet */}
+        <FadeIn delay={0.45}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "stretch", // Changed to stretch so the line spans the text
+              gap: "16px",
+              marginBottom: "2.5rem",
+              maxWidth: "640px",
+            }}
+          >
+            <div
+              style={{
+                width: "4px",
+                background:
+                  "linear-gradient(to bottom, var(--brand), transparent)",
+                borderRadius: "4px",
+                flexShrink: 0,
+                marginTop: "12px",
+                marginBottom: "12px", // Keeps it slightly shorter than the text block
+              }}
+            />
+            <p
+              style={{
+                fontSize: "clamp(17px, 2vw, 21px)",
+                color: "var(--text-2)",
+                fontWeight: 300,
+                lineHeight: 1.75,
+                margin: 0,
+              }}
+            >
+              Over two decades manufacturing precision gears, gearboxes, and
+              sprockets from the industrial heart of South India — machined to
+              IS, ISO, AGMA, and DIN standards.
+            </p>
+          </div>
+        </FadeIn>
+
+        {/* CTA buttons */}
+        <FadeIn delay={0.6}>
+          <div
+            style={{
+              display: "flex",
+              gap: "14px",
+              flexWrap: "wrap",
+              marginBottom: "5rem",
+            }}
+          >
+            <MagneticButton>
+              <motion.a
+                href="#contact"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  background: "var(--brand)",
+                  color: "#fff",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  padding: "15px 34px",
+                  borderRadius: "12px",
+                  textDecoration: "none",
+                  boxShadow: "0 6px 24px rgba(64,53,135,0.35)",
+                  transition: "background 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "var(--brand-hover)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "var(--brand)";
+                }}
+              >
+                Request a Quote
+              </motion.a>
+            </MagneticButton>
+            <MagneticButton>
+              <motion.a
+                href="#products"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  border: "1.5px solid var(--border-2)",
+                  color: "var(--text-2)",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  padding: "15px 34px",
+                  borderRadius: "12px",
+                  textDecoration: "none",
+                  background: "var(--bg-card)",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "var(--brand-border)";
+                  e.currentTarget.style.color = "var(--brand)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "var(--border-2)";
+                  e.currentTarget.style.color = "var(--text-2)";
+                }}
+              >
+                View Products
+              </motion.a>
+            </MagneticButton>
+          </div>
+        </FadeIn>
+
+        {/* ── ENGAGING LOWER BLOCK ─────────────────────────────────────
+            3 capability cards + full-width violet stats bar
+        ─────────────────────────────────────────────────────────────── */}
+        <FadeIn delay={0.75}>
+          <div
+            style={{
+              borderTop: "1px solid var(--border-1)",
+              paddingTop: "3rem",
+            }}
+          >
+            {/* Capability cards */}
+            <div
+              style={{ display: "grid", gap: "14px", marginBottom: "2rem" }}
+              className="grid-cols-1 sm:grid-cols-3"
+            >
+              {capabilities.map((cap, i) => (
+                <div
+                  key={i}
+                  style={{
+                    padding: "1.75rem 1.5rem",
+                    background: "var(--bg-card)",
+                    border: "1px solid var(--border-1)",
+                    borderRadius: "16px",
+                    boxShadow: "var(--shadow)",
+                    transition: "border-color 0.25s, transform 0.25s",
+                    cursor: "default",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "var(--brand-border)";
+                    e.currentTarget.style.transform = "translateY(-3px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--border-1)";
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "12px",
+                      background: "var(--brand-muted)",
+                      border: "1px solid var(--brand-border)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    <cap.icon
+                      style={{
+                        width: "20px",
+                        height: "20px",
+                        color: "var(--brand)",
+                      }}
+                      strokeWidth={1.8}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "24px",
+                      fontWeight: 900,
+                      color: "var(--brand)",
+                      letterSpacing: "-0.02em",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {cap.label}
+                  </div>
+                  <div style={{ fontSize: "15px", color: "var(--text-2)" }}>
+                    {cap.sub}
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <div className="relative z-10 flex flex-col md:flex-row gap-8 md:gap-16 items-start">
-              <div className="flex-shrink-0">
-                <div className="w-20 h-20 bg-white/[0.03] border border-white/10 flex items-center justify-center rounded-lg group-hover:bg-orange-600/10 transition-colors duration-500">
-                  <step.icon
-                    className="w-10 h-10 text-orange-600"
-                    strokeWidth={1.5}
-                  />
+            {/* Violet full-width stat bar */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                background: "var(--brand)",
+                borderRadius: "16px",
+                overflow: "hidden",
+                boxShadow: "0 8px 32px rgba(64,53,135,0.28)",
+              }}
+              className="grid-cols-2 sm:grid-cols-4"
+            >
+              {[
+                { val: 20, suf: "+", lbl: "Years Experience" },
+                { val: 9500, suf: "", lbl: "Sq Ft Facility" },
+                { val: 300, suf: " HP", lbl: "Gearbox Range" },
+                { val: 200, suf: "+", lbl: "Clients Served" },
+              ].map((s, i) => (
+                <div
+                  key={i}
+                  style={{
+                    padding: "1.5rem",
+                    borderRight:
+                      i < 3 ? "1px solid rgba(255,255,255,0.15)" : "none",
+                    textAlign: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "clamp(1.6rem, 3vw, 2.2rem)",
+                      fontWeight: 900,
+                      color: "#fff",
+                      letterSpacing: "-0.02em",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    <AnimatedCounter to={s.val} suffix={s.suf} />
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "rgba(255,255,255,0.72)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {s.lbl}
+                  </div>
                 </div>
-              </div>
-
-              <div className="flex-grow">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-[1px] w-6 bg-white/20"></div>
-                  <span className="text-gray-400 font-mono text-xs tracking-widest">
-                    PHASE {step.id}
-                  </span>
-                </div>
-
-                <h3 className="text-3xl md:text-4xl font-black uppercase mb-4 tracking-tight text-white">
-                  {step.title}
-                </h3>
-
-                <p className="text-gray-400 text-lg leading-relaxed mb-8 max-w-2xl">
-                  {step.desc}
-                </p>
-
-                <div className="flex gap-12 border-t border-white/10 pt-6">
-                  {step.stats.map((stat, i) => (
-                    <div key={i}>
-                      <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">
-                        {stat.label}
-                      </p>
-                      <p className="text-sm md:text-base font-mono text-gray-200">
-                        {stat.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
           </div>
-        ))}
+        </FadeIn>
       </div>
     </section>
   );
 }
 
-// ==========================================
-// CALCULATOR COMPONENT
-// ==========================================
-function TorqueCalculator() {
-  const [hp, setHp] = useState(50);
-  const [rpm, setRpm] = useState(1440);
-  const torque = ((hp * 7127) / rpm).toFixed(2);
+// ═══════════════════════════════════════════════════════════════════
+// ABOUT — reworked: quote-style + horizontal milestone strip (item 10)
+// Uses blurred SectionShell so gears show softly behind
+// ═══════════════════════════════════════════════════════════════════
+function AboutSection() {
+  const milestones = [
+    { year: "2001", event: "Founded", detail: "Coimbatore" },
+    { year: "2008", event: "9500 Sq Ft", detail: "New facility" },
+    { year: "2014", event: "5-Axis CNC", detail: "Capability added" },
+    { year: "2019", event: "150+ Clients", detail: "South India" },
+    { year: "2024", event: "300 HP", detail: "Gearbox capacity" },
+  ];
+
+  const missionItems = [
+    "Superior Customer Service",
+    "Environmental Quality Protection",
+    "Equal Access to Resources",
+    "Encourage Innovation",
+    "Sustainable Development",
+    "Zero Waste Disposal",
+  ];
 
   return (
-    <div className="bg-[#0a0a0a]/80 border border-white/10 backdrop-blur-md p-8 rounded-xl w-full max-w-md shadow-2xl">
-      <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
-        <Calculator className="text-orange-500" />
-        <h3 className="text-xl font-bold uppercase tracking-widest">
-          Torque Estimator
-        </h3>
-      </div>
-
-      <div className="space-y-6">
-        <div>
-          <div className="flex justify-between mb-2 text-sm text-gray-400 font-mono">
-            <label>Motor Power (HP)</label>
-            <span>{hp} HP</span>
-          </div>
-          <input
-            type="range"
-            min="1"
-            max="500"
-            value={hp}
-            onChange={(e) => setHp(Number(e.target.value))}
-            className="w-full accent-orange-500"
-          />
-        </div>
-
-        <div>
-          <div className="flex justify-between mb-2 text-sm text-gray-400 font-mono">
-            <label>Speed (RPM)</label>
-            <span>{rpm} RPM</span>
-          </div>
-          <input
-            type="range"
-            min="10"
-            max="3000"
-            value={rpm}
-            onChange={(e) => setRpm(Number(e.target.value))}
-            className="w-full accent-orange-500"
-          />
-        </div>
-
-        <div className="mt-8 pt-6 border-t border-white/10">
-          <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">
-            Estimated Output Torque
-          </p>
-          <div className="text-4xl font-black text-orange-500 tracking-tighter">
-            {torque}{" "}
-            <span className="text-lg text-gray-400 font-normal tracking-normal">
-              Nm
+    <SectionShell id="about" blurred style={{ padding: "8rem 1.5rem" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+        {/* Section label */}
+        <FadeIn>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+              marginBottom: "3rem",
+            }}
+          >
+            <div
+              style={{
+                height: "2px",
+                width: "40px",
+                background: "var(--brand)",
+                borderRadius: "1px",
+              }}
+            />
+            <span
+              style={{
+                fontSize: "13px",
+                fontWeight: 700,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: "var(--brand)",
+              }}
+            >
+              Company Profile
             </span>
           </div>
+        </FadeIn>
+
+        {/* Two columns: story + right panel */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr",
+            gap: "4rem",
+            marginBottom: "4rem",
+          }}
+          className="lg:grid-cols-[1.1fr_1fr]"
+        >
+          {/* LEFT — large heading + bordered quote paragraph */}
+          <FadeIn>
+            <div>
+              {/* Large decorative quote mark */}
+              <div
+                style={{
+                  fontSize: "6rem",
+                  lineHeight: 0.7,
+                  color: "var(--brand)",
+                  opacity: 0.12,
+                  fontFamily: "Georgia, serif",
+                  marginBottom: "1.5rem",
+                  userSelect: "none",
+                }}
+              >
+                "
+              </div>
+
+              <AnimatedHeading
+                text={["Our Story & ", "Heritage"]}
+                as="h2"
+                style={{
+                  fontSize: "clamp(3rem, 6vw, 5rem)",
+                  fontWeight: 900,
+                  textTransform: "uppercase",
+                  letterSpacing: "-0.04em",
+                  lineHeight: 0.9,
+                  marginBottom: "2rem",
+                  color: "var(--text-1)",
+                }}
+              />
+
+              {/* Bordered pull-quote */}
+              <div
+                style={{
+                  borderLeft: "3px solid var(--brand)",
+                  paddingLeft: "24px",
+                  marginBottom: "1.75rem",
+                }}
+              >
+                <p
+                  style={{
+                    color: "var(--text-2)",
+                    lineHeight: 1.9,
+                    fontSize: "18px",
+                  }}
+                >
+                  Founded in 2001 by{" "}
+                  <strong style={{ color: "var(--text-1)", fontWeight: 700 }}>
+                    Shri. T. Selvaraj
+                  </strong>{" "}
+                  in Coimbatore — South India's premier industrial hub — Saam
+                  Geaars has grown from a precision machining workshop into a
+                  comprehensive gear and gearbox manufacturer trusted by
+                  industry leaders across the country.
+                </p>
+              </div>
+
+              <p
+                style={{
+                  color: "var(--text-2)",
+                  lineHeight: 1.85,
+                  fontSize: "17px",
+                }}
+              >
+                Our 9500 Sq Ft facility houses 5-axis CNC machines, in-house
+                heat treatment chambers, and a full quality assurance lab. Every
+                gear we manufacture is a commitment to zero-defect kinetic
+                transfer.
+              </p>
+            </div>
+          </FadeIn>
+
+          {/* RIGHT — MD card + mission 2-col grid */}
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+          >
+            {/* MD card */}
+            <FadeIn delay={0.1}>
+              <div
+                style={{
+                  background: "var(--brand)",
+                  borderRadius: "20px",
+                  padding: "2.5rem",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                {/* Gear watermark */}
+                <div
+                  style={{
+                    position: "absolute",
+                    right: "-24px",
+                    bottom: "-28px",
+                    fontSize: "9rem",
+                    color: "rgba(255,255,255,0.07)",
+                    userSelect: "none",
+                    pointerEvents: "none",
+                    lineHeight: 1,
+                  }}
+                >
+                  ⚙
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "18px",
+                    marginBottom: "1.5rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "64px",
+                      height: "64px",
+                      borderRadius: "50%",
+                      background: "rgba(255,255,255,0.2)",
+                      border: "2px solid rgba(255,255,255,0.35)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "22px",
+                      fontWeight: 900,
+                      color: "#fff",
+                      flexShrink: 0,
+                    }}
+                  >
+                    TS
+                  </div>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "19px",
+                        fontWeight: 800,
+                        color: "#fff",
+                      }}
+                    >
+                      Shri. T. Selvaraj
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "rgba(255,255,255,0.7)",
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        marginTop: "3px",
+                      }}
+                    >
+                      Managing Director &amp; Founder
+                    </div>
+                  </div>
+                </div>
+                <p
+                  style={{
+                    fontSize: "17px",
+                    color: "rgba(255,255,255,0.88)",
+                    lineHeight: 1.75,
+                    fontStyle: "italic",
+                    position: "relative",
+                    zIndex: 1,
+                  }}
+                >
+                  "Engineering is not just our work — it is our way of thinking.
+                  Every gear we make carries the trust of the industry that runs
+                  on it."
+                </p>
+              </div>
+            </FadeIn>
+
+            {/* Mission — compact 2-col grid */}
+            <FadeIn delay={0.2}>
+              <div
+                style={{
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border-1)",
+                  padding: "2rem",
+                  borderRadius: "20px",
+                  boxShadow: "var(--shadow)",
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: "16px",
+                    fontWeight: 800,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    marginBottom: "1.25rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    color: "var(--text-1)",
+                  }}
+                >
+                  <Target
+                    style={{
+                      color: "var(--brand)",
+                      width: "18px",
+                      height: "18px",
+                    }}
+                  />
+                  Our Mission
+                </h3>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "12px",
+                  }}
+                >
+                  {missionItems.map((item, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "8px",
+                      }}
+                    >
+                      <CheckCircle2
+                        style={{
+                          width: "15px",
+                          height: "15px",
+                          color: "var(--brand)",
+                          flexShrink: 0,
+                          marginTop: "3px",
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: "14px",
+                          color: "var(--text-2)",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {item}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </FadeIn>
+          </div>
         </div>
+
+        {/* Horizontal milestone strip */}
+        <FadeIn delay={0.15}>
+          <div
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-1)",
+              borderRadius: "20px",
+              padding: "2rem 2.5rem",
+              boxShadow: "var(--shadow)",
+              overflow: "hidden",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "12px",
+                color: "var(--text-3)",
+                textTransform: "uppercase",
+                letterSpacing: "0.18em",
+                marginBottom: "1.75rem",
+                fontWeight: 600,
+              }}
+            >
+              Our Journey
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(5, 1fr)",
+                gap: "0",
+                position: "relative",
+              }}
+            >
+              {/* Connecting line */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "20px",
+                  left: "10%",
+                  right: "10%",
+                  height: "2px",
+                  background: "var(--border-1)",
+                  zIndex: 0,
+                }}
+              />
+              {milestones.map((m, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    textAlign: "center",
+                    position: "relative",
+                    zIndex: 1,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "50%",
+                      background: "var(--brand)",
+                      border: "3px solid var(--bg-card)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: "12px",
+                      boxShadow: "0 0 0 2px var(--brand-border)",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 900,
+                        color: "#fff",
+                      }}
+                    >
+                      {i + 1}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: 900,
+                      color: "var(--brand)",
+                      marginBottom: "3px",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    {m.year}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      color: "var(--text-1)",
+                      marginBottom: "2px",
+                    }}
+                  >
+                    {m.event}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "var(--text-3)" }}>
+                    {m.detail}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </FadeIn>
       </div>
-    </div>
+    </SectionShell>
   );
 }
 
-// ==========================================
-// IMAGE GALLERY COMPONENT (BENTO GRID)
-// ==========================================
-function FacilityGallery() {
-  // Replace these URLs with your actual facility images later
-  const images = [
+// ═══════════════════════════════════════════════════════════════════
+// MANUFACTURING JOURNEY — no detail chips (item 6)
+// Transparent — gears visible behind
+// ═══════════════════════════════════════════════════════════════════
+function ManufacturingJourney() {
+  const steps = [
     {
-      id: 1,
-      span: "md:col-span-2 md:row-span-2 h-80 md:h-auto",
-      title: "Primary Machining Center",
-      url: "https://images.unsplash.com/photo-1565043589221-1a6fd9ae45c7?auto=format&fit=crop&w=1200&q=80",
+      id: "01",
+      title: "Engineering",
+      desc: "Every gear begins as a blueprint. Our engineering team analyses application loads, speed requirements, and material specifications. CAD and CAM models are verified before a single tool touches metal.",
+      icon: Cpu,
     },
     {
-      id: 2,
-      span: "col-span-1 h-64",
+      id: "02",
+      title: "CNC Machining",
+      desc: "Our 5-axis CNC machining centres produce complex gear geometries with repeatability that conventional machines cannot match. The 9500 Sq Ft production floor runs double-shift to meet tight deadlines.",
+      icon: Crosshair,
+    },
+    {
+      id: "03",
+      title: "Heat Treatment",
+      desc: "Carburizing, case hardening, and induction hardening are performed in-house — not outsourced. This gives us full metallurgical traceability and consistent case depths critical for high-torque applications.",
+      icon: Flame,
+    },
+    {
+      id: "04",
       title: "Quality Assurance",
-      url: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80",
-    },
-    {
-      id: 3,
-      span: "col-span-1 h-64",
-      title: "Heat Treatment Facility",
-      url: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&w=800&q=80",
-    },
-    {
-      id: 4,
-      span: "md:col-span-3 h-80",
-      title: "Assembly & Output",
-      url: "https://images.unsplash.com/photo-1581092335397-9583eb92d232?auto=format&fit=crop&w=1600&q=80",
+      desc: "Before dispatch, every gear is inspected on our CMM, subjected to ultrasonic and magnetic particle tests, and profile-checked against the original drawing. Zero-defect shipping is the standard.",
+      icon: Activity,
     },
   ];
 
   return (
+    // Transparent section — gears visible (item 3)
     <section
-      id="facility"
-      className="py-32 px-6 pointer-events-auto relative z-10 border-t border-white/5 bg-white/[0.01] backdrop-blur-sm"
+      id="process"
+      style={{ padding: "8rem 1.5rem", position: "relative", zIndex: 5 }}
     >
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
-          <div>
-            <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-4">
-              Infrastructure
-            </h2>
-            <p className="text-gray-400 max-w-xl leading-relaxed">
-              A glimpse inside our sprawling 9500 Sq Ft. manufacturing facility,
-              equipped with state-of-the-art highly configured machinery.
+      <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
+        <FadeIn>
+          <div style={{ textAlign: "center", marginBottom: "5rem" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "14px",
+                marginBottom: "1.5rem",
+              }}
+            >
+              <div
+                style={{
+                  height: "2px",
+                  width: "40px",
+                  background: "var(--brand)",
+                  borderRadius: "1px",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  color: "var(--brand)",
+                }}
+              >
+                How We Build
+              </span>
+              <div
+                style={{
+                  height: "2px",
+                  width: "40px",
+                  background: "var(--brand)",
+                  borderRadius: "1px",
+                }}
+              />
+            </div>
+            <AnimatedHeading
+              text={["The Saam", "Process"]}
+              highlight="Process"
+              as="h2"
+              style={{
+                fontSize: "clamp(3.5rem, 9vw, 7rem)",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "-0.04em",
+                lineHeight: 0.88,
+                marginBottom: "1.5rem",
+                color: "var(--text-1)",
+              }}
+            />
+            <p
+              style={{
+                color: "var(--text-2)",
+                fontSize: "18px",
+                maxWidth: "560px",
+                margin: "0 auto",
+                lineHeight: 1.75,
+              }}
+            >
+              Four phases of manufacturing precision — from engineering design
+              to zero-defect dispatch.
             </p>
           </div>
-          <div className="flex items-center gap-2 text-orange-600 font-mono text-sm tracking-widest uppercase">
-            <ImageIcon className="w-5 h-5" /> Gallery View
-          </div>
-        </div>
+        </FadeIn>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[250px]">
-          {images.map((img) => (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "5rem",
+            paddingBottom: "6rem",
+          }}
+        >
+          {steps.map((step, index) => (
             <div
-              key={img.id}
-              className={`group relative overflow-hidden rounded-xl bg-[#0a0a0a]/80 border border-white/10 ${img.span}`}
+              key={index}
+              style={{
+                position: "sticky",
+                top: `calc(12vh + ${index * 2.5}rem)`,
+                // Frosted glass cards — gears show through softly behind cards (item 3)
+                background:
+                  "color-mix(in srgb, var(--bg-card) 88%, transparent)",
+                backdropFilter: "blur(16px)",
+                WebkitBackdropFilter: "blur(16px)",
+                border: "1px solid var(--border-1)",
+                padding: "3rem 3.5rem",
+                borderRadius: "20px",
+                boxShadow: "var(--shadow-lg)",
+                transition: "border-color 0.4s",
+                overflow: "hidden",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "var(--brand-border)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "var(--border-1)";
+              }}
             >
-              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/10 transition-colors duration-700 z-10"></div>
+              {/* Watermark number */}
+              <div
+                style={{
+                  position: "absolute",
+                  right: "1.5rem",
+                  bottom: "-2rem",
+                  fontSize: "11rem",
+                  fontWeight: 900,
+                  color: "var(--brand-muted)",
+                  pointerEvents: "none",
+                  userSelect: "none",
+                  lineHeight: 1,
+                }}
+              >
+                {step.id}
+              </div>
 
-              <img
-                src={img.url}
-                alt={img.title}
-                className="absolute inset-0 w-full h-full object-cover grayscale-[0.8] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 ease-out"
-              />
-
-              <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/90 to-transparent z-20 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
-                <h4 className="text-white font-bold uppercase tracking-wider">
-                  {img.title}
-                </h4>
+              <div
+                style={{
+                  position: "relative",
+                  zIndex: 10,
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "2rem",
+                }}
+              >
+                <div
+                  style={{
+                    width: "60px",
+                    height: "60px",
+                    borderRadius: "16px",
+                    background: "var(--brand-muted)",
+                    border: "1px solid var(--brand-border)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <step.icon
+                    style={{
+                      width: "28px",
+                      height: "28px",
+                      color: "var(--brand)",
+                    }}
+                    strokeWidth={1.5}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "var(--text-3)",
+                      fontFamily: "monospace",
+                      letterSpacing: "0.18em",
+                      textTransform: "uppercase",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    Phase {step.id}
+                  </div>
+                  <AnimatedHeading
+                    text={step.title}
+                    as="h3"
+                    style={{
+                      fontSize: "clamp(2.2rem, 4.5vw, 3.2rem)",
+                      fontWeight: 900,
+                      textTransform: "uppercase",
+                      letterSpacing: "-0.03em",
+                      lineHeight: 0.95,
+                      marginBottom: "1.25rem",
+                      color: "var(--text-1)",
+                    }}
+                  />
+                  <p
+                    style={{
+                      color: "var(--text-2)",
+                      fontSize: "17px",
+                      lineHeight: 1.85,
+                      maxWidth: "640px",
+                    }}
+                  >
+                    {step.desc}
+                  </p>
+                  {/* NO chips (item 6) */}
+                </div>
               </div>
             </div>
           ))}
@@ -359,152 +1131,427 @@ function FacilityGallery() {
   );
 }
 
-// ==========================================
-// API-DRIVEN EMAIL ENQUIRY FORM
-// ==========================================
-function EnquiryForm() {
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    message: "",
-  });
-  const [status, setStatus] = useState("idle");
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setStatus("submitting");
-
-    const payload = {
-      ...formData,
-      access_key: "a3a6b7a7-b562-4dad-a166-63d076d3b95a",
-      subject: `New Enquiry from ${formData.name} - Saam Geaars`,
-      from_name: "Saam Geaars Website",
-    };
-
-    try {
-      const response = await fetch("https://api.web3forms.com/submit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setStatus("success");
-        setFormData({ name: "", phone: "", message: "" });
-        setTimeout(() => setStatus("idle"), 5000);
-      } else {
-        setStatus("error");
-      }
-    } catch (error) {
-      console.error(error);
-      setStatus("error");
-    }
-  };
-
+// ═══════════════════════════════════════════════════════════════════
+// PRODUCTS — LEFT-aligned heading (item 7), transparent so gears show
+// ═══════════════════════════════════════════════════════════════════
+function ProductsSection() {
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4 bg-white/[0.02] p-8 border border-white/10 rounded-xl relative"
+    <section
+      id="products"
+      style={{ padding: "8rem 1.5rem", borderTop: "1px solid var(--border-1)" }}
     >
-      <div>
-        <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
-          Full Name
-        </label>
-        <input
-          type="text"
-          name="name"
-          required
-          value={formData.name}
-          onChange={handleChange}
-          disabled={status === "submitting"}
-          className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-colors disabled:opacity-50"
-          placeholder="John Doe"
-        />
-      </div>
-      <div>
-        <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
-          Contact Number
-        </label>
-        <input
-          type="tel"
-          name="phone"
-          required
-          value={formData.phone}
-          onChange={handleChange}
-          disabled={status === "submitting"}
-          className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-colors disabled:opacity-50"
-          placeholder="+91 98765 43210"
-        />
-      </div>
-      <div>
-        <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
-          Enquiry Details
-        </label>
-        <textarea
-          name="message"
-          required
-          value={formData.message}
-          onChange={handleChange}
-          disabled={status === "submitting"}
-          rows="4"
-          className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-colors resize-none disabled:opacity-50"
-          placeholder="How can we help you?"
-        ></textarea>
-      </div>
+      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+        <FadeIn>
+          {/* LEFT-ALIGNED (item 7) */}
+          <div style={{ marginBottom: "4rem" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "14px",
+                marginBottom: "1.5rem",
+              }}
+            >
+              <div
+                style={{
+                  height: "2px",
+                  width: "40px",
+                  background: "var(--brand)",
+                  borderRadius: "1px",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  color: "var(--brand)",
+                }}
+              >
+                Our Range
+              </span>
+            </div>
+            <AnimatedHeading
+              text={["Engineering ", "Output"]}
+              as="h2"
+              style={{
+                fontSize: "clamp(3.2rem, 8vw, 6.5rem)",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "-0.05em",
+                lineHeight: 0.88,
+                marginBottom: "1rem",
+                color: "var(--text-1)",
+              }}
+            />
+            <p
+              style={{
+                color: "var(--text-2)",
+                fontSize: "18px",
+                maxWidth: "560px",
+                lineHeight: 1.75,
+              }}
+            >
+              Precision gears, gearboxes, and sprockets manufactured to IS, ISO,
+              AGMA, and DIN standards. Hover a card to reveal full
+              specifications.
+            </p>
+          </div>
+        </FadeIn>
 
-      <button
-        type="submit"
-        disabled={status === "submitting" || status === "success"}
-        className={`w-full font-bold py-3 px-4 rounded-md transition-all flex items-center justify-center gap-2 uppercase tracking-wider text-sm mt-4
-          ${status === "idle" || status === "error" ? "bg-orange-600 hover:bg-orange-700 text-white" : ""}
-          ${status === "submitting" ? "bg-orange-600/50 cursor-not-allowed text-white/70" : ""}
-          ${status === "success" ? "bg-green-600 text-white" : ""}
-        `}
-      >
-        {status === "idle" && (
-          <>
-            <Send className="w-4 h-4" /> Send Enquiry
-          </>
-        )}
-        {status === "error" && (
-          <>
-            <Send className="w-4 h-4" /> Retry Send
-          </>
-        )}
-        {status === "submitting" && (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" /> Sending...
-          </>
-        )}
-        {status === "success" && (
-          <>
-            <CheckCircle className="w-4 h-4" /> Message Sent
-          </>
-        )}
-      </button>
+        <ProductFlipCards />
 
-      {status === "error" && (
-        <p className="text-red-500 text-xs text-center mt-2">
-          There was an error sending your message. Please try again.
-        </p>
-      )}
-    </form>
+        <FadeIn delay={0.2}>
+          <div
+            style={{
+              marginTop: "3rem",
+              padding: "2rem 2.5rem",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-1)",
+              borderRadius: "16px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px",
+              boxShadow: "var(--shadow)",
+            }}
+          >
+            <div>
+              <p
+                style={{
+                  fontSize: "19px",
+                  fontWeight: 700,
+                  color: "var(--text-1)",
+                  marginBottom: "4px",
+                }}
+              >
+                Need a custom specification?
+              </p>
+              <p style={{ fontSize: "15px", color: "var(--text-2)" }}>
+                We manufacture to your drawing — single piece or batch
+                production.
+              </p>
+            </div>
+            <a
+              href="#contact"
+              style={{
+                padding: "13px 28px",
+                background: "var(--brand)",
+                color: "#fff",
+                borderRadius: "10px",
+                fontSize: "14px",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                textDecoration: "none",
+                transition: "background 0.2s",
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "var(--brand-hover)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "var(--brand)";
+              }}
+            >
+              Enquire Now
+            </a>
+          </div>
+        </FadeIn>
+      </div>
+    </section>
   );
 }
 
-// ==========================================
-// MAIN APP COMPONENT
-// ==========================================
-export default function App() {
+// ═══════════════════════════════════════════════════════════════════
+// CONTACT — simple form (item 9), blurred section
+// ═══════════════════════════════════════════════════════════════════
+function ContactSection() {
+  const contactItems = [
+    {
+      icon: MapPin,
+      label: "Headquarters",
+      lines: [
+        "86, Thippa Gounder Street, Sivalingapuram,",
+        "Ondipudur, Coimbatore — 641 016, TN",
+      ],
+    },
+    {
+      icon: Phone,
+      label: "Direct Lines",
+      lines: ["+91 98430 18244", "+91 92444 32312", "0422 2632312"],
+    },
+    {
+      icon: Mail,
+      label: "Electronic Mail",
+      lines: ["saamgeaars@rediffmail.com", "saamgeaars@gmail.com"],
+    },
+  ];
+
+  return (
+    <SectionShell
+      id="contact"
+      blurred
+      style={{
+        padding: "8rem 1.5rem 5rem",
+        borderTop: "1px solid var(--border-2)",
+      }}
+    >
+      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+        <FadeIn>
+          <div style={{ textAlign: "center", marginBottom: "5rem" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "14px",
+                marginBottom: "1.5rem",
+              }}
+            >
+              <div
+                style={{
+                  height: "2px",
+                  width: "40px",
+                  background: "var(--brand)",
+                  borderRadius: "1px",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  color: "var(--brand)",
+                }}
+              >
+                Get in Touch
+              </span>
+              <div
+                style={{
+                  height: "2px",
+                  width: "40px",
+                  background: "var(--brand)",
+                  borderRadius: "1px",
+                }}
+              />
+            </div>
+            <AnimatedHeading
+              text={["Initiate", "Contact"]}
+              as="h2"
+              style={{
+                fontSize: "clamp(3.2rem, 8vw, 6.5rem)",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "-0.04em",
+                lineHeight: 0.88,
+                marginBottom: "1.5rem",
+                color: "var(--text-1)",
+              }}
+            />
+            <p
+              style={{
+                fontSize: "18px",
+                color: "var(--text-2)",
+                maxWidth: "500px",
+                margin: "0 auto",
+                lineHeight: 1.75,
+              }}
+            >
+              Ready to optimise your mechanical output? Share your requirements
+              and we'll deliver a precise solution.
+            </p>
+          </div>
+        </FadeIn>
+
+        <div
+          style={{ display: "grid", gridTemplateColumns: "1fr", gap: "4rem" }}
+          className="lg:grid-cols-2"
+        >
+          <FadeIn>
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "14px",
+                  marginBottom: "2rem",
+                }}
+              >
+                {contactItems.map((item, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "16px",
+                      padding: "20px",
+                      background: "var(--bg-card)",
+                      border: "1px solid var(--border-1)",
+                      borderRadius: "14px",
+                      boxShadow: "var(--shadow)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "46px",
+                        height: "46px",
+                        borderRadius: "12px",
+                        background: "var(--brand-muted)",
+                        border: "1px solid var(--brand-border)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <item.icon
+                        style={{
+                          color: "var(--brand)",
+                          width: "20px",
+                          height: "20px",
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <h4
+                        style={{
+                          fontSize: "12px",
+                          color: "var(--text-3)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.14em",
+                          marginBottom: "6px",
+                        }}
+                      >
+                        {item.label}
+                      </h4>
+                      {item.lines.map((line, j) => (
+                        <p
+                          key={j}
+                          style={{
+                            color: "var(--text-1)",
+                            fontSize: "16px",
+                            lineHeight: 1.65,
+                          }}
+                        >
+                          {line}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div
+                style={{
+                  padding: "16px 20px",
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--border-1)",
+                  borderRadius: "12px",
+                  marginBottom: "2rem",
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: "var(--text-3)",
+                    marginBottom: "4px",
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  GST Identification Number
+                </p>
+                <p
+                  style={{
+                    fontSize: "16px",
+                    fontFamily: "monospace",
+                    color: "var(--text-1)",
+                    fontWeight: 600,
+                  }}
+                >
+                  33AOXPS6790L1ZS
+                </p>
+              </div>
+
+              <GoogleMap />
+            </div>
+          </FadeIn>
+
+          {/* Simple contact form — name, phone, email, message (item 9) */}
+          <FadeIn delay={0.15}>
+            <SimpleContactForm />
+          </FadeIn>
+        </div>
+
+        {/* Footer */}
+        <div
+          style={{
+            marginTop: "5rem",
+            paddingTop: "2.5rem",
+            borderTop: "1px solid var(--border-1)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "1rem",
+          }}
+          className="md:flex-row md:justify-between"
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div
+              style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "10px",
+                background: "var(--brand)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Settings
+                style={{ color: "#fff", width: "18px", height: "18px" }}
+              />
+            </div>
+            <span
+              style={{
+                fontSize: "18px",
+                fontWeight: 900,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: "var(--text-1)",
+              }}
+            >
+              Saam<span style={{ color: "var(--brand)" }}>Geaars</span>
+            </span>
+          </div>
+          <div style={{ textAlign: "center" }} className="md:text-right">
+            <p
+              style={{
+                fontSize: "14px",
+                color: "var(--text-3)",
+                marginBottom: "2px",
+              }}
+            >
+              Precision Engineering since 2001
+            </p>
+            <p style={{ fontSize: "13px", color: "var(--text-3)" }}>
+              © 2026 Saam Geaars. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </div>
+    </SectionShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ROOT
+// ═══════════════════════════════════════════════════════════════════
+function InnerApp() {
   const { scrollYProgress } = useScroll();
   const smoothScroll = useSpring(scrollYProgress, {
     stiffness: 80,
@@ -513,19 +1560,39 @@ export default function App() {
   });
 
   return (
-    <div className="relative bg-[#050505] text-gray-200 font-sans selection:bg-orange-500 selection:text-white min-h-screen">
-      {/* 3D WEBGL BACKGROUND WITH GLOBAL GRADIENT */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
+    <div
+      style={{
+        position: "relative",
+        background: "var(--bg)",
+        color: "var(--text-1)",
+        minHeight: "100vh",
+        transition: "background 0.4s, color 0.4s",
+      }}
+    >
+      <StructuredData />
+      <GrainOverlay opacity={0.022} />
+      <ScrollProgressBar scrollYProgress={scrollYProgress} />
+      <CustomCursor />
+
+      {/* Fixed 3D gear background — intentionally visible through most sections (item 3) */}
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: "none",
+        }}
+      >
         <Canvas camera={{ position: [0, 2, 8], fov: 45 }}>
-          <ambientLight intensity={0.5} />
+          <ambientLight intensity={1.5} />
           <spotLight
             position={[10, 10, 10]}
             angle={0.15}
             penumbra={1}
-            intensity={2}
+            intensity={3}
             castShadow
           />
-          <pointLight position={[-10, -10, -10]} intensity={1} />
+          <pointLight position={[-10, -10, -10]} intensity={0.8} />
           <Environment preset="city" />
           <Float speed={1.5} rotationIntensity={0.1} floatIntensity={0.2}>
             <group position={[3, 0, -2]}>
@@ -534,307 +1601,57 @@ export default function App() {
           </Float>
           <ContactShadows
             position={[0, -5, 0]}
-            opacity={0.7}
+            opacity={0.2}
             scale={15}
             blur={2}
             far={6}
           />
         </Canvas>
-
-        {/* GLOBAL LIGHT DARK SCREEN OVERLAY */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/70 to-transparent z-10" />
+        {/* Only left-edge gradient — right side stays open so gears show */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(to right, var(--canvas-grad-from) 20%, var(--canvas-grad-mid) 50%, transparent 80%)",
+            zIndex: 10,
+            transition: "background 0.4s",
+          }}
+        />
       </div>
 
-      <div className="relative z-10 flex flex-col pointer-events-none">
-        {/* Navigation */}
-        <nav className="fixed top-0 w-full border-b border-white/5 bg-black/40 backdrop-blur-xl z-50 pointer-events-auto">
-          <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-            <div className="text-xl font-black tracking-[0.2em] uppercase flex items-center gap-3">
-              <Settings className="text-orange-600 w-6 h-6 animate-[spin_10s_linear_infinite]" />
-              <span>
-                Saam<span className="text-orange-600">Geaars</span>
-              </span>
-            </div>
-            <div className="hidden md:flex gap-8 text-xs font-bold tracking-widest text-gray-400 uppercase">
-              <a href="#about" className="hover:text-white transition-colors">
-                Profile
-              </a>
-              <a
-                href="#products"
-                className="hover:text-white transition-colors"
-              >
-                Products
-              </a>
-              <a href="#process" className="hover:text-white transition-colors">
-                Journey
-              </a>
-              <a
-                href="#facility"
-                className="hover:text-white transition-colors"
-              >
-                Facility
-              </a>
-              <a href="#contact" className="hover:text-white transition-colors">
-                Contact
-              </a>
-            </div>
-          </div>
-        </nav>
+      <ActiveNav />
+      <WhatsAppButton />
 
-        {/* Hero Section */}
-        <section className="min-h-screen flex items-center px-6 pt-20 pointer-events-auto relative z-10">
-          <div className="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <div className="flex items-center gap-4 mb-6">
-                <div className="h-[1px] w-12 bg-orange-600"></div>
-                <span className="text-orange-600 font-mono text-sm tracking-widest uppercase">
-                  Est. 2001 • Coimbatore, India
-                </span>
-              </div>
-              <h1 className="text-5xl md:text-7xl font-black mb-6 uppercase tracking-tighter leading-[0.9]">
-                Insightful <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-500">
-                  Engineering.
-                </span>
-              </h1>
-              <p className="text-lg text-gray-400 mb-10 max-w-lg font-light leading-relaxed">
-                Over two decades of experience in the gear and gearbox
-                manufacturing industry. Operating from the prime hub of South
-                India, we owe our product excellence to state-of-the-art
-                equipment.
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="flex justify-end lg:justify-center"
-            >
-              <TorqueCalculator />
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Company Profile & Mission */}
-        <section
-          id="about"
-          className="py-32 px-6 pointer-events-auto relative z-10 border-y border-white/5 bg-white/[0.01] backdrop-blur-sm"
-        >
-          <div className="max-w-7xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-16">
-              <div>
-                <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-6">
-                  Company Profile
-                </h2>
-                <p className="text-gray-400 mb-6 leading-relaxed">
-                  Founded in 2001, Saam Geaars is located in the prime hub of
-                  South India, Coimbatore. Backed by insightful engineering
-                  experts in gear technology, and under the able guidance of our
-                  Managing Director, Shri. T. Selvaraj, we have conquered
-                  greater heights.
-                </p>
-                <p className="text-gray-400 leading-relaxed">
-                  We owe our product excellence to our sprawling 9500 Sq Ft
-                  infrastructure facility. Every department of our manufacturing
-                  unit is backed by experienced and skilled employees.
-                </p>
-              </div>
-              <div className="bg-[#0a0a0a]/80 backdrop-blur-md p-8 border border-white/10 rounded-xl shadow-2xl">
-                <h3 className="text-2xl font-bold uppercase tracking-wider mb-6 flex items-center gap-3">
-                  <Target className="text-orange-500" /> Our Mission
-                </h3>
-                <ul className="space-y-4">
-                  {[
-                    "Provide Superior Customer Service",
-                    "Protect the Quality of the Environment",
-                    "Ensure Equal Access to Resources",
-                    "Encourage Innovation",
-                    "Practise Sustainable Development",
-                    "Implement Zero Waste Disposal",
-                  ].map((item, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start gap-3 text-gray-300"
-                    >
-                      <CheckCircle2 className="w-5 h-5 text-orange-600 flex-shrink-0" />
-                      <span className="text-sm tracking-wide uppercase">
-                        {item}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Vertical Stacking Journey */}
-        <div className="pointer-events-auto">
-          <ManufacturingJourney />
-        </div>
-
-        {/* Product Catalog */}
-        <section
-          id="products"
-          className="py-32 px-6 pointer-events-auto relative z-10 border-t border-white/5 bg-white/[0.01] backdrop-blur-sm"
-        >
-          <div className="max-w-7xl mx-auto">
-            <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-16 text-center">
-              Engineering Output
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-[#0a0a0a]/80 backdrop-blur-md border border-white/10 p-8 hover:border-orange-500/50 transition-colors group rounded-xl shadow-2xl">
-                <Cog className="w-12 h-12 text-orange-600 mb-6 group-hover:rotate-180 transition-transform duration-700" />
-                <h3 className="text-2xl font-bold uppercase mb-2">
-                  Precision Gears
-                </h3>
-                <p className="text-orange-500 text-sm font-mono mb-6">
-                  Module: Up to 30 / Size: Up to 3m
-                </p>
-                <ul className="text-gray-400 space-y-2 text-sm">
-                  <li>• Spur & Helical Gears</li>
-                  <li>• Worm and Worm Wheel</li>
-                  <li>• Bevel Gears</li>
-                  <li>• Hardened & Profile Ground</li>
-                  <li>• Rack & Pinion (Custom Spec)</li>
-                  <li>• Girth Gears</li>
-                </ul>
-              </div>
-
-              <div className="bg-[#0a0a0a]/80 backdrop-blur-md border border-white/10 p-8 hover:border-orange-500/50 transition-colors group rounded-xl shadow-2xl">
-                <Factory className="w-12 h-12 text-orange-600 mb-6 group-hover:scale-110 transition-transform duration-500" />
-                <h3 className="text-2xl font-bold uppercase mb-2">
-                  Gear Box Units
-                </h3>
-                <p className="text-orange-500 text-sm font-mono mb-6">
-                  Range: Up to 300HP
-                </p>
-                <ul className="text-gray-400 space-y-2 text-sm">
-                  <li>• Worm Reduction Gearboxes</li>
-                  <li>• Helical & Bevel Gearboxes</li>
-                  <li>• Geared Motors</li>
-                  <li>• Internal Gear Boxes</li>
-                  <li>• Worm Shafts & Wheels</li>
-                  <li>• Input Shafts & Spares</li>
-                </ul>
-              </div>
-
-              <div className="bg-[#0a0a0a]/80 backdrop-blur-md border border-white/10 p-8 hover:border-orange-500/50 transition-colors group rounded-xl shadow-2xl">
-                <Settings className="w-12 h-12 text-orange-600 mb-6 group-hover:rotate-90 transition-transform duration-500" />
-                <h3 className="text-2xl font-bold uppercase mb-2">Sprockets</h3>
-                <p className="text-orange-500 text-sm font-mono mb-6">
-                  Pitch: Up to 10" / OD up to 36"
-                </p>
-                <ul className="text-gray-400 space-y-2 text-sm">
-                  <li>• Standard Roller Chain Sprocket</li>
-                  <li>• Conveyor Sprocket (Forged Link)</li>
-                  <li>• Traction Wheel (Segmental Type)</li>
-                  <li>• Hub Types: A, B, C, & D</li>
-                  <li>• Simplex / Duplex / Triplex</li>
-                  <li>• Tooth Profile: ANSI/ASME/IS/ISO</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Infrastructure Image Gallery */}
-        <div className="pointer-events-auto">
-          <FacilityGallery />
-        </div>
-
-        {/* Contact Footer */}
-        <section
-          id="contact"
-          className="pt-24 pb-12 bg-[#050505]/95 backdrop-blur-2xl pointer-events-auto border-t border-white/10 relative z-20"
-        >
-          <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 mb-20">
-            <div>
-              <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-8">
-                Initiate Contact
-              </h2>
-              <p className="text-gray-400 mb-10 max-w-md leading-relaxed">
-                Ready to optimize your mechanical output? Reach out to our
-                engineering team with your specifications, and we will formulate
-                a precise manufacturing solution.
-              </p>
-
-              <div className="space-y-8">
-                <div className="flex items-start gap-4 text-gray-300">
-                  <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <MapPin className="text-orange-500 w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm text-gray-500 uppercase tracking-widest mb-1">
-                      Headquarters
-                    </h4>
-                    <p>
-                      86, Thippa Gounder Street, Sivalingapuram,
-                      <br />
-                      Ondipudur, Coimbatore - 641 016
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 text-gray-300">
-                  <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Phone className="text-orange-500 w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm text-gray-500 uppercase tracking-widest mb-1">
-                      Direct Lines
-                    </h4>
-                    <p>
-                      +91 98430 18244 <br /> +91 92444 32312 <br /> 0422 2632312
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 text-gray-300">
-                  <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Mail className="text-orange-500 w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm text-gray-500 uppercase tracking-widest mb-1">
-                      Electronic Mail
-                    </h4>
-                    <p>
-                      saamgeaars@rediffmail.com <br /> saamgeaars@gmail.com
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <EnquiryForm />
-            </div>
-          </div>
-
-          <div className="max-w-7xl mx-auto px-6 border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="text-2xl font-black tracking-[0.2em] uppercase flex items-center gap-3">
-              <Settings className="text-orange-600 w-6 h-6" />
-              <span>
-                Saam<span className="text-orange-600">Geaars</span>
-              </span>
-            </div>
-            <div className="flex flex-col items-center md:items-end text-center md:text-right">
-              <p className="text-gray-500 font-mono text-xs mb-1">
-                GST IN: 33AOXPS6790L1ZS
-              </p>
-              <p className="text-gray-600 text-xs">
-                © 2026 Saam Geaars. All rights reserved.
-              </p>
-            </div>
-          </div>
-        </section>
+      <div style={{ position: "relative", zIndex: 10 }}>
+        <HeroSection />
+        <IndustryMarquee />
+        {/* About: blurred — gears softly visible */}
+        <AboutSection />
+        <StatsBanner />
+        <SectionDivider />
+        <CertificationsBadges />
+        <SectionDivider />
+        <TestimonialsCarousel />
+        {/* WhySaamSection REMOVED (item 5) */}
+        <SectionDivider label="Our Process" />
+        {/* Process: transparent — gears fully visible behind frosted cards */}
+        <ManufacturingJourney />
+        {/* Products: transparent — gears visible */}
+        <ProductsSection />
+        {/* Gallery: blurred — gears softly visible */}
+        <GalleryLightbox />
+        {/* Contact: blurred — gears softly visible */}
+        <ContactSection />
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <InnerApp />
+    </ThemeProvider>
   );
 }
