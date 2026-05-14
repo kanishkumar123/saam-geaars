@@ -19,59 +19,105 @@ export function StructuredData() {
       "@context": "https://schema.org",
       "@type": "LocalBusiness",
       "@id": "https://www.saamgeaars.com/#business",
-      "name": "Saam Geaars",
-      "alternateName": "Saam Gears",
-      "description": "Precision gear and gearbox manufacturer in Coimbatore, India. Specialists in helical gears, worm gearboxes, sprockets and CNC machined components since 2001.",
-      "url": "https://www.saamgeaars.com",
-      "telephone": ["+91-98430-18244", "+91-92444-32312", "0422-2632312"],
-      "email": ["saamgeaars@gmail.com", "saamgeaars@rediffmail.com"],
-      "foundingDate": "2001",
-      "vatID": "33AOXPS6790L1ZS",
-      "address": {
+      name: "Saam Geaars",
+      alternateName: "Saam Gears",
+      description:
+        "Precision gear and gearbox manufacturer in Coimbatore, India. Specialists in helical gears, worm gearboxes, sprockets and CNC machined components since 2001.",
+      url: "https://www.saamgeaars.com",
+      telephone: ["+91-98430-18244", "+91-92444-32312", "0422-2632312"],
+      email: ["saamgeaars@gmail.com", "saamgeaars@rediffmail.com"],
+      foundingDate: "2001",
+      vatID: "33AOXPS6790L1ZS",
+      address: {
         "@type": "PostalAddress",
-        "streetAddress": "86, Thippa Gounder Street, Sivalingapuram",
-        "addressLocality": "Ondipudur",
-        "addressRegion": "Tamil Nadu",
-        "postalCode": "641016",
-        "addressCountry": "IN"
+        streetAddress: "86, Thippa Gounder Street, Sivalingapuram",
+        addressLocality: "Ondipudur",
+        addressRegion: "Tamil Nadu",
+        postalCode: "641016",
+        addressCountry: "IN",
       },
-      "geo": {
+      geo: {
         "@type": "GeoCoordinates",
-        "latitude": 11.0168,
-        "longitude": 76.9558
+        latitude: 11.0168,
+        longitude: 76.9558,
       },
-      "openingHoursSpecification": [
+      openingHoursSpecification: [
         {
           "@type": "OpeningHoursSpecification",
-          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-          "opens": "09:00",
-          "closes": "18:30"
-        }
+          dayOfWeek: [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+          ],
+          opens: "09:00",
+          closes: "18:30",
+        },
       ],
-      "hasOfferCatalog": {
+      hasOfferCatalog: {
         "@type": "OfferCatalog",
-        "name": "Gear Manufacturing Products",
-        "itemListElement": [
-          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Precision Spur & Helical Gears", "description": "Module 1–30, OD up to 3000mm, hardened and profile ground" } },
-          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Worm Reduction Gearboxes", "description": "Power range 0.5 to 300 HP, ratios up to 60:1" } },
-          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Industrial Sprockets", "description": "Chain pitch up to 10 inches, OD up to 36 inches, all hub types" } },
-          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Bevel & Helical Gearboxes", "description": "Custom-built to customer specification" } },
-          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "CNC Machined Components", "description": "5-axis CNC machining in 9500 sq ft facility" } }
-        ]
+        name: "Gear Manufacturing Products",
+        itemListElement: [
+          {
+            "@type": "Offer",
+            itemOffered: {
+              "@type": "Product",
+              name: "Precision Spur & Helical Gears",
+              description:
+                "Module 1–30, OD up to 3000mm, hardened and profile ground",
+            },
+          },
+          {
+            "@type": "Offer",
+            itemOffered: {
+              "@type": "Product",
+              name: "Worm Reduction Gearboxes",
+              description: "Power range 0.5 to 300 HP, ratios up to 60:1",
+            },
+          },
+          {
+            "@type": "Offer",
+            itemOffered: {
+              "@type": "Product",
+              name: "Industrial Sprockets",
+              description:
+                "Chain pitch up to 10 inches, OD up to 36 inches, all hub types",
+            },
+          },
+          {
+            "@type": "Offer",
+            itemOffered: {
+              "@type": "Product",
+              name: "Bevel & Helical Gearboxes",
+              description: "Custom-built to customer specification",
+            },
+          },
+          {
+            "@type": "Offer",
+            itemOffered: {
+              "@type": "Product",
+              name: "CNC Machined Components",
+              description: "CNC machining in facility",
+            },
+          },
+        ],
       },
-      "areaServed": {
+      areaServed: {
         "@type": "State",
-        "name": "Tamil Nadu"
+        name: "Tamil Nadu",
       },
-      "sameAs": []
+      sameAs: [],
     });
     document.head.appendChild(script);
-    return () => { if (script.parentNode) script.parentNode.removeChild(script); };
+    return () => {
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
   }, []);
 
   return null;
 }
-
 
 // ─────────────────────────────────────────────
 // MetaTags — paste into your index.html <head>

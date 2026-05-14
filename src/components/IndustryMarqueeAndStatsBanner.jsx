@@ -16,7 +16,6 @@ export function IndustryMarquee() {
     "Planetary Gears",
     "Heat Treatment",
     "Girth Gears",
-    "5-Axis Milling",
     "Worm Wheels",
     "Gear Hobbing",
     "Roller Chains",
@@ -107,13 +106,6 @@ const STATS = [
     detail: "Est. 2001",
   },
   {
-    value: 9500,
-    suffix: "",
-    prefix: "",
-    label: "Sq Ft Facility",
-    detail: "Ondipudur, Coimbatore",
-  },
-  {
     value: 300,
     suffix: " HP",
     prefix: "",
@@ -121,7 +113,7 @@ const STATS = [
     detail: "Single Unit Capacity",
   },
   {
-    value: 200,
+    value: 150,
     suffix: "+",
     prefix: "",
     label: "Satisfied Clients",
@@ -145,7 +137,7 @@ export function StatsBanner() {
           maxWidth: "1280px",
           margin: "0 auto",
           display: "grid",
-          gridTemplateColumns: "repeat(2, 1fr)",
+          gridTemplateColumns: "repeat(3, 1fr)",
           gap: "2.5rem",
         }}
         className="md:grid-cols-4"
@@ -179,15 +171,6 @@ export function StatsBanner() {
                 }}
               >
                 {stat.label}
-              </div>
-              <div
-                style={{
-                  fontSize: "13px",
-                  fontFamily: "monospace",
-                  color: "var(--text-3)",
-                }}
-              >
-                {stat.detail}
               </div>
             </div>
           </FadeIn>

@@ -10,7 +10,7 @@
 // 8. Infrastructure left-aligned (in GalleryLightbox.jsx)
 // 9. SimpleContactForm with real web3forms key
 // 10. About reworked: quote-style, horizontal timeline, MD card
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState } from "react";
 import * as THREE from "three";
 import { motion, useScroll, useSpring } from "framer-motion";
 import { Canvas, useFrame } from "@react-three/fiber";
@@ -31,6 +31,7 @@ import {
   Shield,
   Clock,
 } from "lucide-react";
+import logoImg from "./assets/saam-geaars.png";
 
 import ActiveNav from "./components/ActiveNav";
 import { ThemeProvider } from "./components/ThemeContext";
@@ -155,7 +156,7 @@ function GearboxModel({ scrollProgress }) {
 // ═══════════════════════════════════════════════════════════════════
 function HeroSection() {
   const capabilities = [
-    { icon: Zap, label: "5-Axis CNC", sub: "Complex gear geometries" },
+    { icon: Zap, label: "CNC", sub: "Complex gear geometries" },
     { icon: Shield, label: "±0.001 mm", sub: "Profile ground tolerance" },
     { icon: Clock, label: "7–10 Days", sub: "Custom turnaround time" },
   ];
@@ -335,139 +336,146 @@ function HeroSection() {
             </MagneticButton>
           </div>
         </FadeIn>
-
-        {/* ── ENGAGING LOWER BLOCK ─────────────────────────────────────
-            3 capability cards + full-width violet stats bar
-        ─────────────────────────────────────────────────────────────── */}
-        <FadeIn delay={0.75}>
-          <div
-            style={{
-              borderTop: "1px solid var(--border-1)",
-              paddingTop: "3rem",
-            }}
-          >
-            {/* Capability cards */}
-            <div
-              style={{ display: "grid", gap: "14px", marginBottom: "2rem" }}
-              className="grid-cols-1 sm:grid-cols-3"
-            >
-              {capabilities.map((cap, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: "1.75rem 1.5rem",
-                    background: "var(--bg-card)",
-                    border: "1px solid var(--border-1)",
-                    borderRadius: "16px",
-                    boxShadow: "var(--shadow)",
-                    transition: "border-color 0.25s, transform 0.25s",
-                    cursor: "default",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "var(--brand-border)";
-                    e.currentTarget.style.transform = "translateY(-3px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "var(--border-1)";
-                    e.currentTarget.style.transform = "translateY(0)";
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "12px",
-                      background: "var(--brand-muted)",
-                      border: "1px solid var(--brand-border)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginBottom: "1rem",
-                    }}
-                  >
-                    <cap.icon
-                      style={{
-                        width: "20px",
-                        height: "20px",
-                        color: "var(--brand)",
-                      }}
-                      strokeWidth={1.8}
-                    />
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "24px",
-                      fontWeight: 900,
-                      color: "var(--brand)",
-                      letterSpacing: "-0.02em",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    {cap.label}
-                  </div>
-                  <div style={{ fontSize: "15px", color: "var(--text-2)" }}>
-                    {cap.sub}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Violet full-width stat bar */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
-                background: "var(--brand)",
-                borderRadius: "16px",
-                overflow: "hidden",
-                boxShadow: "0 8px 32px rgba(64,53,135,0.28)",
-              }}
-              className="grid-cols-2 sm:grid-cols-4"
-            >
-              {[
-                { val: 20, suf: "+", lbl: "Years Experience" },
-                { val: 9500, suf: "", lbl: "Sq Ft Facility" },
-                { val: 300, suf: " HP", lbl: "Gearbox Range" },
-                { val: 200, suf: "+", lbl: "Clients Served" },
-              ].map((s, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: "1.5rem",
-                    borderRight:
-                      i < 3 ? "1px solid rgba(255,255,255,0.15)" : "none",
-                    textAlign: "center",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "clamp(1.6rem, 3vw, 2.2rem)",
-                      fontWeight: 900,
-                      color: "#fff",
-                      letterSpacing: "-0.02em",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    <AnimatedCounter to={s.val} suffix={s.suf} />
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "rgba(255,255,255,0.72)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.1em",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {s.lbl}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </FadeIn>
       </div>
     </section>
+  );
+}
+
+function MissionCard({ item }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      className="mission-card"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: "relative",
+        borderRadius: "16px",
+        padding: "1.25rem",
+        cursor: "default",
+        isolation: "isolate",
+        overflow: "hidden",
+        // Border: glowing conic ring on hover, subtle default
+        border: `1px solid ${hovered ? "transparent" : "var(--border-1)"}`,
+        background: "var(--bg-elevated)",
+        // Conic gradient glow border via box-shadow on hover
+        boxShadow: hovered
+          ? `0 0 0 1.5px ${item.accentColor}, 0 8px 28px -4px ${item.accentColor.replace("0.75", "0.25")}`
+          : "none",
+        transform: hovered ? "translateY(-3px)" : "translateY(0)",
+        transition:
+          "border-color 0.25s, box-shadow 0.35s, transform 0.3s cubic-bezier(0.22,1,0.36,1)",
+      }}
+    >
+      {/* Shimmer sweep — fires on hover */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          borderRadius: "16px",
+          background:
+            "linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.07) 50%, transparent 70%)",
+          backgroundSize: "200% 100%",
+          backgroundPosition: hovered ? "-100% center" : "200% center",
+          animation: hovered ? "missionShimmer 0.65s ease forwards" : "none",
+          opacity: hovered ? 1 : 0,
+          transition: "opacity 0.2s",
+        }}
+      />
+
+      {/* Top row: number + icon ring */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "1rem",
+        }}
+      >
+        <span
+          style={{
+            fontSize: "11px",
+            fontWeight: 700,
+            color: "var(--text-3)",
+            letterSpacing: "0.12em",
+          }}
+        >
+          {item.n}
+        </span>
+
+        <div
+          className="mission-icon-ring"
+          style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "50%",
+            border: "1px solid var(--border-2)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: hovered
+              ? item.accentColor.replace("0.75", "0.12")
+              : "transparent",
+            transition: "background 0.25s",
+          }}
+        >
+          <CheckCircle2
+            style={{
+              width: "15px",
+              height: "15px",
+              color: hovered ? item.barColor : "var(--text-3)",
+              transition: "color 0.25s",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Label */}
+      <p
+        style={{
+          fontSize: "24px",
+          fontWeight: 700,
+          color: "var(--text-1)",
+          lineHeight: 1.4,
+          marginBottom: "6px",
+        }}
+      >
+        {item.label}
+      </p>
+
+      {/* Description */}
+      <p
+        style={{
+          fontSize: "15px",
+          color: "var(--text-2)",
+          lineHeight: 1.6,
+          marginBottom: "1rem",
+        }}
+      >
+        {item.sub}
+      </p>
+
+      {/* Fill bar */}
+      <div
+        style={{
+          height: "2px",
+          borderRadius: "1px",
+          background: "var(--border-1)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          className="mission-bar-fill"
+          style={{
+            height: "100%",
+            background: item.barColor,
+            borderRadius: "1px",
+          }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -476,14 +484,6 @@ function HeroSection() {
 // Uses blurred SectionShell so gears show softly behind
 // ═══════════════════════════════════════════════════════════════════
 function AboutSection() {
-  const milestones = [
-    { year: "2001", event: "Founded", detail: "Coimbatore" },
-    { year: "2008", event: "9500 Sq Ft", detail: "New facility" },
-    { year: "2014", event: "5-Axis CNC", detail: "Capability added" },
-    { year: "2019", event: "150+ Clients", detail: "South India" },
-    { year: "2024", event: "300 HP", detail: "Gearbox capacity" },
-  ];
-
   const missionItems = [
     "Superior Customer Service",
     "Environmental Quality Protection",
@@ -494,7 +494,11 @@ function AboutSection() {
   ];
 
   return (
-    <SectionShell id="about" blurred style={{ padding: "8rem 1.5rem" }}>
+    <SectionShell
+      id="about"
+      blurred
+      style={{ padding: "5rem 1.5rem 2rem 1.5rem" }}
+    >
       <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
         {/* Section label */}
         <FadeIn>
@@ -533,7 +537,7 @@ function AboutSection() {
           style={{
             display: "grid",
             gridTemplateColumns: "1fr",
-            gap: "4rem",
+            gap: "1rem",
             marginBottom: "4rem",
           }}
           className="lg:grid-cols-[1.1fr_1fr]"
@@ -545,11 +549,11 @@ function AboutSection() {
               <div
                 style={{
                   fontSize: "6rem",
-                  lineHeight: 0.7,
+                  lineHeight: 0.2,
                   color: "var(--brand)",
                   opacity: 0.12,
                   fontFamily: "Georgia, serif",
-                  marginBottom: "1.5rem",
+                  marginBottom: "0rem",
                   userSelect: "none",
                 }}
               >
@@ -587,7 +591,7 @@ function AboutSection() {
                 >
                   Founded in 2001 by{" "}
                   <strong style={{ color: "var(--text-1)", fontWeight: 700 }}>
-                    Shri. T. Selvaraj
+                    Mr. T. Selvaraj
                   </strong>{" "}
                   in Coimbatore — South India's premier industrial hub — Saam
                   Geaars has grown from a precision machining workshop into a
@@ -595,19 +599,6 @@ function AboutSection() {
                   industry leaders across the country.
                 </p>
               </div>
-
-              <p
-                style={{
-                  color: "var(--text-2)",
-                  lineHeight: 1.85,
-                  fontSize: "17px",
-                }}
-              >
-                Our 9500 Sq Ft facility houses 5-axis CNC machines, in-house
-                heat treatment chambers, and a full quality assurance lab. Every
-                gear we manufacture is a commitment to zero-defect kinetic
-                transfer.
-              </p>
             </div>
           </FadeIn>
 
@@ -676,7 +667,7 @@ function AboutSection() {
                         color: "#fff",
                       }}
                     >
-                      Shri. T. Selvaraj
+                      Mr. T. Selvaraj
                     </div>
                     <div
                       style={{
@@ -687,7 +678,7 @@ function AboutSection() {
                         marginTop: "3px",
                       }}
                     >
-                      Managing Director &amp; Founder
+                      Proprietor
                     </div>
                   </div>
                 </div>
@@ -714,184 +705,119 @@ function AboutSection() {
                 style={{
                   background: "var(--bg-card)",
                   border: "1px solid var(--border-1)",
-                  padding: "2rem",
+                  padding: "2rem 2rem 1.75rem",
                   borderRadius: "20px",
                   boxShadow: "var(--shadow)",
                 }}
               >
+                {/* Title */}
                 <h3
                   style={{
-                    fontSize: "16px",
+                    fontSize: "30px",
                     fontWeight: 800,
                     textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    marginBottom: "1.25rem",
+                    letterSpacing: "0.06em",
+                    marginBottom: "1.5rem",
                     display: "flex",
                     alignItems: "center",
-                    gap: "10px",
+                    gap: "12px",
                     color: "var(--text-1)",
                   }}
                 >
                   <Target
                     style={{
                       color: "var(--brand)",
-                      width: "18px",
-                      height: "18px",
+                      width: "26px",
+                      height: "26px",
                     }}
                   />
                   Our Mission
                 </h3>
+
+                {/* 3-column card grid */}
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "12px",
+                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gap: "10px",
                   }}
                 >
-                  {missionItems.map((item, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "8px",
-                      }}
-                    >
-                      <CheckCircle2
-                        style={{
-                          width: "15px",
-                          height: "15px",
-                          color: "var(--brand)",
-                          flexShrink: 0,
-                          marginTop: "3px",
-                        }}
-                      />
-                      <span
-                        style={{
-                          fontSize: "14px",
-                          color: "var(--text-2)",
-                          lineHeight: 1.5,
-                        }}
-                      >
-                        {item}
-                      </span>
-                    </div>
+                  {[
+                    {
+                      n: "01",
+                      accentColor: "rgba(64,53,135,0.75)",
+                      barColor: "var(--brand)",
+                      label: "Superior Customer Service",
+                      sub: "Every client gets direct access to our engineering team — from enquiry to dispatch.",
+                    },
+                    {
+                      n: "02",
+                      accentColor: "rgba(34,197,94,0.75)",
+                      barColor: "#22c55e",
+                      label: "Protect the Environment",
+                      sub: "Sustainable machining practices and responsible material sourcing across all operations.",
+                    },
+                    {
+                      n: "03",
+                      accentColor: "rgba(226,75,74,0.75)",
+                      barColor: "#e24b4a",
+                      label: "Equal Access to Resources",
+                      sub: "Fair allocation of capacity — no client too small or too large for our attention.",
+                    },
+                    {
+                      n: "04",
+                      accentColor: "rgba(64,53,135,0.75)",
+                      barColor: "var(--brand)",
+                      label: "Encourage Innovation",
+                      sub: "Continuously investing in new tooling, processes, and engineering capabilities.",
+                    },
+                    {
+                      n: "05",
+                      accentColor: "rgba(34,197,94,0.75)",
+                      barColor: "#22c55e",
+                      label: "Sustainable Development",
+                      sub: "Long-term growth built on quality and trust rather than short-term volume.",
+                    },
+                    {
+                      n: "06",
+                      accentColor: "rgba(226,75,74,0.75)",
+                      barColor: "#e24b4a",
+                      label: "Zero Waste Disposal",
+                      sub: "All metal scrap and process waste is segregated, recycled, or safely disposed.",
+                    },
+                  ].map((item) => (
+                    <MissionCard key={item.n} item={item} />
                   ))}
                 </div>
+
+                {/* Keyframes injected once */}
+                <style>{`
+      @keyframes missionShimmer {
+        0%   { background-position: 200% center }
+        100% { background-position: -100% center }
+      }
+      @keyframes missionSpin {
+        to { transform: rotate(360deg); }
+      }
+      .mission-bar-fill {
+        width: 0%;
+        transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .mission-card:hover .mission-bar-fill {
+        width: 100%;
+      }
+      .mission-icon-ring {
+        transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s;
+      }
+      .mission-card:hover .mission-icon-ring {
+        transform: rotate(14deg) scale(1.12);
+        border-color: var(--brand-border) !important;
+      }
+    `}</style>
               </div>
             </FadeIn>
           </div>
         </div>
-
-        {/* Horizontal milestone strip */}
-        <FadeIn delay={0.15}>
-          <div
-            style={{
-              background: "var(--bg-card)",
-              border: "1px solid var(--border-1)",
-              borderRadius: "20px",
-              padding: "2rem 2.5rem",
-              boxShadow: "var(--shadow)",
-              overflow: "hidden",
-            }}
-          >
-            <p
-              style={{
-                fontSize: "12px",
-                color: "var(--text-3)",
-                textTransform: "uppercase",
-                letterSpacing: "0.18em",
-                marginBottom: "1.75rem",
-                fontWeight: 600,
-              }}
-            >
-              Our Journey
-            </p>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(5, 1fr)",
-                gap: "0",
-                position: "relative",
-              }}
-            >
-              {/* Connecting line */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: "20px",
-                  left: "10%",
-                  right: "10%",
-                  height: "2px",
-                  background: "var(--border-1)",
-                  zIndex: 0,
-                }}
-              />
-              {milestones.map((m, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    textAlign: "center",
-                    position: "relative",
-                    zIndex: 1,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "50%",
-                      background: "var(--brand)",
-                      border: "3px solid var(--bg-card)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginBottom: "12px",
-                      boxShadow: "0 0 0 2px var(--brand-border)",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: 900,
-                        color: "#fff",
-                      }}
-                    >
-                      {i + 1}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "16px",
-                      fontWeight: 900,
-                      color: "var(--brand)",
-                      marginBottom: "3px",
-                      fontFamily: "monospace",
-                    }}
-                  >
-                    {m.year}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      color: "var(--text-1)",
-                      marginBottom: "2px",
-                    }}
-                  >
-                    {m.event}
-                  </div>
-                  <div style={{ fontSize: "12px", color: "var(--text-3)" }}>
-                    {m.detail}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </FadeIn>
       </div>
     </SectionShell>
   );
@@ -912,7 +838,7 @@ function ManufacturingJourney() {
     {
       id: "02",
       title: "CNC Machining",
-      desc: "Our 5-axis CNC machining centres produce complex gear geometries with repeatability that conventional machines cannot match. The 9500 Sq Ft production floor runs double-shift to meet tight deadlines.",
+      desc: "Our CNC machining centres produce complex gear geometries with repeatability that conventional machines cannot match. The production floor runs double-shift to meet tight deadlines.",
       icon: Crosshair,
     },
     {
@@ -924,7 +850,7 @@ function ManufacturingJourney() {
     {
       id: "04",
       title: "Quality Assurance",
-      desc: "Before dispatch, every gear is inspected on our CMM, subjected to ultrasonic and magnetic particle tests, and profile-checked against the original drawing. Zero-defect shipping is the standard.",
+      desc: "Before dispatch, every gear is inspected, subjected to ultrasonic and magnetic particle tests, and profile-checked against the original drawing. Zero-defect shipping is the standard.",
       icon: Activity,
     },
   ];
@@ -1272,21 +1198,21 @@ function ContactSection() {
   const contactItems = [
     {
       icon: MapPin,
-      label: "Headquarters",
+      label: "Factory",
       lines: [
-        "86, Thippa Gounder Street, Sivalingapuram,",
-        "Ondipudur, Coimbatore — 641 016, TN",
+        "16/1, Thiyagi Sengaliyappan Nagar",
+        "Irugur, Coimbatore — 641 103, TN",
       ],
     },
     {
       icon: Phone,
       label: "Direct Lines",
-      lines: ["+91 98430 18244", "+91 92444 32312", "0422 2632312"],
+      lines: ["+91 98430 18244", "+91 94887 59678"],
     },
     {
       icon: Mail,
       label: "Electronic Mail",
-      lines: ["saamgeaars@rediffmail.com", "saamgeaars@gmail.com"],
+      lines: ["saamgeaars@gmail.com", "saamgeaars@rediffmail.com"],
     },
   ];
 
@@ -1340,7 +1266,7 @@ function ContactSection() {
               />
             </div>
             <AnimatedHeading
-              text={["Initiate", "Contact"]}
+              text={["Initiate", " Contact"]}
               as="h2"
               style={{
                 fontSize: "clamp(3.2rem, 8vw, 6.5rem)",
@@ -1445,38 +1371,6 @@ function ContactSection() {
                 ))}
               </div>
 
-              <div
-                style={{
-                  padding: "16px 20px",
-                  background: "var(--bg-elevated)",
-                  border: "1px solid var(--border-1)",
-                  borderRadius: "12px",
-                  marginBottom: "2rem",
-                }}
-              >
-                <p
-                  style={{
-                    fontSize: "12px",
-                    color: "var(--text-3)",
-                    marginBottom: "4px",
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  GST Identification Number
-                </p>
-                <p
-                  style={{
-                    fontSize: "16px",
-                    fontFamily: "monospace",
-                    color: "var(--text-1)",
-                    fontWeight: 600,
-                  }}
-                >
-                  33AOXPS6790L1ZS
-                </p>
-              </div>
-
               <GoogleMap />
             </div>
           </FadeIn>
@@ -1506,14 +1400,21 @@ function ContactSection() {
                 width: "36px",
                 height: "36px",
                 borderRadius: "10px",
-                background: "var(--brand)",
+                background: "var(--white)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Settings
-                style={{ color: "#fff", width: "18px", height: "18px" }}
+              <img
+                src={logoImg}
+                alt="SaamGeaars"
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "8px",
+                  objectFit: "cover",
+                }}
               />
             </div>
             <span
@@ -1572,7 +1473,7 @@ function InnerApp() {
       <StructuredData />
       <GrainOverlay opacity={0.022} />
       <ScrollProgressBar scrollYProgress={scrollYProgress} />
-      <CustomCursor />
+      {/* <CustomCursor /> */}
 
       {/* Fixed 3D gear background — intentionally visible through most sections (item 3) */}
       <div

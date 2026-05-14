@@ -635,7 +635,7 @@ export default function App() {
                   Founded in 2001, Saam Geaars is located in the prime hub of
                   South India, Coimbatore. Backed by insightful engineering
                   experts in gear technology, and under the able guidance of our
-                  Managing Director, Shri. T. Selvaraj, we have conquered
+                  Proprietor, Mr. T. Selvaraj, we have conquered
                   greater heights.
                 </p>
                 <p className="text-gray-400 leading-relaxed">
