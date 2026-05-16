@@ -59,6 +59,7 @@ import TestimonialsCarousel from "./components/TestimonialsCarousel";
 import ProductFlipCards from "./components/ProductFlipCards";
 import { GalleryLightbox } from "./components/GalleryLightbox";
 import SimpleContactForm from "./components/SimpleContactForm";
+import ProductShowcaseFullBleed from "./components/ProductShowcaseFullBleed";
 
 // ── Reusable section shell ────────────────────────────────────────
 // blurred=true: frosted glass so gears peek through softly
@@ -1531,6 +1532,7 @@ function InnerApp() {
         <AboutSection />
         <StatsBanner />
         <SectionDivider />
+        <ProductShowcaseFullBleed />
         <CertificationsBadges />
         <SectionDivider />
         <TestimonialsCarousel />
