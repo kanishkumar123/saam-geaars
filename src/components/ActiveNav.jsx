@@ -5,8 +5,8 @@ import { useTheme } from "./ThemeContext";
 import logoImg from "../assets/saam-geaars.png";
 
 const NAV_LINKS = [
-  { label: "Products", href: "#products" },
   { label: "Journey", href: "#process" },
+  { label: "Products", href: "#products" },
   { label: "Facility", href: "#facility" },
   { label: "Contact", href: "#contact" },
 ];
