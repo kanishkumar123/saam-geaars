@@ -9,6 +9,7 @@
 // - Drag/swipe support
 // - No category pills, no specs, no enquire button
 // - No violet gradient/tint
+// - Centered dots only
 //
 // ═══════════════════════════════════════════════════════════════
 
@@ -16,51 +17,65 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-// ── SWAP THESE WITH YOUR REAL IMAGE IMPORTS ──────────────────────
+// ── PRODUCT IMAGE IMPORTS ───────────────────────────────────────
 import product1 from "../assets/product1.png";
 import product2 from "../assets/product2.png";
 import product3 from "../assets/product3.png";
 import product4 from "../assets/product4.png";
 import product5 from "../assets/product5.png";
 import product6 from "../assets/product6.png";
+import product7 from "../assets/product7.png";
 
 // ── PRODUCT DATA ────────────────────────────────────────────────
 const PRODUCTS = [
   {
     id: "p1",
     image: product1,
-    name: "Product Name One",
-    tagline: "Short one-line tagline about this product goes here.",
+    name: "6 Row Special Purpose Sprockets",
+    tagline:
+      "Heavy-duty multi-row sprockets engineered for precision, strength, and reliable industrial power transmission.",
   },
   {
     id: "p2",
     image: product2,
-    name: "Product Name Two",
-    tagline: "Short one-line tagline about this product goes here.",
+    name: "3.5 Meters Girth Gear",
+    tagline:
+      "Large-diameter girth gear designed for smooth rotation, stable load handling, and long-lasting performance.",
   },
   {
     id: "p3",
     image: product3,
-    name: "Product Name Three",
-    tagline: "Short one-line tagline about this product goes here.",
+    name: "8T Sprockets",
+    tagline:
+      "Compact 8-tooth sprockets built for accurate chain engagement and dependable motion transfer.",
   },
   {
     id: "p4",
     image: product4,
-    name: "Product Name Four",
-    tagline: "Short one-line tagline about this product goes here.",
+    name: "10T 4 Row Special Sprocket",
+    tagline:
+      "Four-row 10T sprocket crafted for synchronized drive performance in demanding machinery applications.",
   },
   {
     id: "p5",
     image: product5,
-    name: "Product Name Five",
-    tagline: "Short one-line tagline about this product goes here.",
+    name: "40T 6 Row Special Sprocket",
+    tagline:
+      "Robust 40-tooth six-row sprocket made for high-load operation, durability, and consistent chain grip.",
   },
   {
     id: "p6",
     image: product6,
-    name: "Product Name Six",
-    tagline: "Short one-line tagline about this product goes here.",
+    name: "Gear Wheel",
+    tagline:
+      "Precision-machined gear wheel built for smooth torque transfer, strength, and long service life.",
+  },
+  {
+    id: "p7",
+    image: product7,
+    name: "6 Row Special 10T Sprocket",
+    tagline:
+      "Specialized 10T six-row sprocket designed for rugged chain drive systems and heavy-duty usage.",
   },
 ];
 
@@ -220,7 +235,6 @@ export default function ProductShowcaseFullBleed() {
   const interactionTimeoutRef = useRef(null);
 
   const total = PRODUCTS.length;
-  const product = PRODUCTS[index];
 
   const goTo = useCallback(
     (i) => {
@@ -444,7 +458,7 @@ export default function ProductShowcaseFullBleed() {
                       left: "clamp(1.4rem, 3vw, 3rem)",
                       bottom: "clamp(3.4rem, 7vh, 5.2rem)",
                       zIndex: 10,
-                      maxWidth: "min(680px, 68vw)",
+                      maxWidth: "min(780px, 72vw)",
                       pointerEvents: "none",
                     }}
                   >
@@ -455,11 +469,11 @@ export default function ProductShowcaseFullBleed() {
                           variants={textItemVariants}
                           style={{
                             display: "inline-block",
-                            fontSize: "clamp(2.6rem, 5.2vw, 5.7rem)",
+                            fontSize: "clamp(1.6rem, 3vw, 3.4rem)",
                             fontWeight: 950,
                             color: "#fff",
                             letterSpacing: "-0.055em",
-                            lineHeight: 0.88,
+                            lineHeight: 0.9,
                             marginRight: "0.23em",
                             textTransform: "uppercase",
                             textShadow: "0 8px 34px rgba(0,0,0,0.45)",
@@ -479,7 +493,7 @@ export default function ProductShowcaseFullBleed() {
                         color: "rgba(255,255,255,0.76)",
                         fontWeight: 300,
                         lineHeight: 1.65,
-                        maxWidth: "520px",
+                        maxWidth: "560px",
                         textShadow: "0 4px 20px rgba(0,0,0,0.45)",
                       }}
                     >
