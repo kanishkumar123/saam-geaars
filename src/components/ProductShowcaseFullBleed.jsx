@@ -2,6 +2,7 @@
 // ProductShowcaseFullBleed.jsx
 //
 // Premium contained product carousel.
+// - Gallery-style section header
 // - Max 1200px main carousel
 // - Previous/next cards visible outside the 1200px area
 // - Smooth spring slide animation
@@ -15,7 +16,9 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Package } from "lucide-react";
+import FadeIn from "./FadeIn";
+import AnimatedHeading from "./AnimatedHeading";
 
 // ── PRODUCT IMAGE IMPORTS ───────────────────────────────────────
 import product1 from "../assets/product1.png";
@@ -303,384 +306,450 @@ export default function ProductShowcaseFullBleed() {
   }, [next, prev, pauseBriefly]);
 
   return (
-    <section
-      id="products"
-      style={{
-        position: "relative",
-        width: "100%",
-        padding: "4rem 0",
-        overflow: "hidden",
-        background:
-          "radial-gradient(circle at center, rgba(255,255,255,0.06) 0%, transparent 34%)",
-      }}
-      aria-roledescription="product carousel"
-    >
-      <div
-        style={{
-          position: "relative",
-          width: "min(1200px, calc(100vw - 48px))",
-          height: "clamp(500px, 70vh, 720px)",
-          margin: "0 auto",
-          overflow: "visible",
-          perspective: "1400px",
-        }}
-      >
-        {/* ── Carousel cards ───────────────────────────────────── */}
-        {PRODUCTS.map((p, i) => {
-          const position = getCircularPosition(i, index, total);
-          const absPosition = Math.abs(position);
+    <section id="products" className="product-showcase-section">
+      <style>{`
+        .product-showcase-section {
+          padding: 4rem 1.5rem;
+          border-top: 1px solid var(--border-1);
+          background: color-mix(in srgb, var(--bg-section) 85%, transparent);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          transition: background 0.4s;
+          overflow: hidden;
+        }
 
-          const isActive = position === 0;
-          const isSideCard = absPosition === 1;
-          const isHidden = absPosition > 1;
+        .product-showcase-container {
+          max-width: 1280px;
+          margin: 0 auto;
+        }
 
-          return (
-            <motion.article
-              key={p.id}
-              animate={getCardAnimation(position)}
-              transition={slideSpring}
-              drag={isActive ? "x" : false}
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.14}
-              onDragStart={() => {
-                setIsInteracting(true);
-              }}
-              onDragEnd={(_, info) => {
-                const swipeDistance = info.offset.x;
-                const swipeVelocity = info.velocity.x;
+        .product-showcase-header {
+          margin-bottom: 3.5rem;
+        }
 
-                if (swipeDistance < -85 || swipeVelocity < -550) {
-                  next();
-                } else if (swipeDistance > 85 || swipeVelocity > 550) {
-                  prev();
-                }
+        .product-showcase-label-row {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 1.5rem;
+        }
 
-                pauseBriefly();
-              }}
-              onClick={() => {
-                if (isSideCard) {
-                  pauseBriefly();
-                  goTo(i);
-                }
-              }}
+        .product-showcase-label-line {
+          height: 2px;
+          width: 40px;
+          background: var(--brand);
+          border-radius: 1px;
+        }
+
+        .product-showcase-label {
+          font-size: 13px;
+          font-weight: 700;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: var(--brand);
+        }
+
+        .product-showcase-helper {
+          color: var(--text-2);
+          max-width: 560px;
+          line-height: 1.75;
+          font-size: 17px;
+          margin: 0;
+        }
+
+        .product-showcase-helper span {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 14px;
+          color: var(--brand);
+          font-weight: 600;
+        }
+
+        .product-carousel-shell {
+          position: relative;
+          width: min(1200px, calc(100vw - 48px));
+          height: clamp(500px, 70vh, 720px);
+          margin: 0 auto;
+          overflow: visible;
+          perspective: 1400px;
+        }
+
+        @media (max-width: 640px) {
+          .product-showcase-section {
+            padding: 5rem 1rem;
+          }
+
+          .product-showcase-header {
+            margin-bottom: 2.5rem;
+          }
+
+          .product-carousel-shell {
+            width: min(100%, calc(100vw - 32px));
+            height: clamp(430px, 62vh, 600px);
+          }
+        }
+      `}</style>
+
+      <div className="product-showcase-container">
+        {/* ── Gallery-style header ─────────────────────────────── */}
+        <FadeIn>
+          <div className="product-showcase-header">
+            <div className="product-showcase-label-row">
+              <div className="product-showcase-label-line" />
+              <span className="product-showcase-label">Our Products</span>
+            </div>
+
+            <AnimatedHeading
+              text="Product Showcase"
+              as="h2"
               style={{
-                position: "absolute",
-                inset: 0,
-                zIndex: isActive ? 30 : isSideCard ? 15 : 1,
-                borderRadius: isActive ? "28px" : "24px",
-                overflow: "hidden",
-                background: "#090909",
-                border: isActive
-                  ? "1px solid rgba(255,255,255,0.15)"
-                  : "1px solid rgba(255,255,255,0.08)",
-                boxShadow: isActive
-                  ? "0 30px 100px rgba(0,0,0,0.36)"
-                  : "0 18px 60px rgba(0,0,0,0.22)",
-                cursor: isActive ? "grab" : isSideCard ? "pointer" : "default",
-                pointerEvents: isHidden ? "none" : "auto",
-                transformStyle: "preserve-3d",
-                willChange: "transform, opacity, filter",
+                fontSize: "clamp(3rem, 7vw, 5.5rem)",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "-0.04em",
+                lineHeight: 0.9,
+                marginBottom: "1rem",
+                color: "var(--text-1)",
               }}
-              whileTap={isActive ? { cursor: "grabbing" } : undefined}
-            >
-              {p.image ? (
-                <motion.img
-                  src={p.image}
-                  alt={p.name}
-                  animate={{
-                    scale: isActive ? 1.025 : 1.06,
-                  }}
-                  transition={{
-                    duration: 1.1,
-                    ease: [0.22, 1, 0.36, 1],
-                  }}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    objectPosition: "center",
-                    display: "block",
-                    userSelect: "none",
-                    pointerEvents: "none",
-                  }}
-                  draggable={false}
-                />
-              ) : (
-                <ImagePlaceholder name={p.name} />
-              )}
+            />
 
-              {/* Neutral overlays only. No violet shade. */}
-              <div
+            <p className="product-showcase-helper">
+              <span>
+                <Package style={{ width: "14px", height: "14px" }} />
+                Explore our precision-manufactured gear and sprocket range
+              </span>
+            </p>
+          </div>
+        </FadeIn>
+
+        {/* ── Carousel ─────────────────────────────────────────── */}
+        <div className="product-carousel-shell">
+          {PRODUCTS.map((p, i) => {
+            const position = getCircularPosition(i, index, total);
+            const absPosition = Math.abs(position);
+
+            const isActive = position === 0;
+            const isSideCard = absPosition === 1;
+            const isHidden = absPosition > 1;
+
+            return (
+              <motion.article
+                key={p.id}
+                animate={getCardAnimation(position)}
+                transition={slideSpring}
+                drag={isActive ? "x" : false}
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.14}
+                onDragStart={() => {
+                  setIsInteracting(true);
+                }}
+                onDragEnd={(_, info) => {
+                  const swipeDistance = info.offset.x;
+                  const swipeVelocity = info.velocity.x;
+
+                  if (swipeDistance < -85 || swipeVelocity < -550) {
+                    next();
+                  } else if (swipeDistance > 85 || swipeVelocity > 550) {
+                    prev();
+                  }
+
+                  pauseBriefly();
+                }}
+                onClick={() => {
+                  if (isSideCard) {
+                    pauseBriefly();
+                    goTo(i);
+                  }
+                }}
                 style={{
                   position: "absolute",
                   inset: 0,
-                  background:
-                    "linear-gradient(to bottom, rgba(0,0,0,0.28) 0%, transparent 34%)",
-                  zIndex: 2,
-                  pointerEvents: "none",
+                  zIndex: isActive ? 30 : isSideCard ? 15 : 1,
+                  borderRadius: isActive ? "28px" : "24px",
+                  overflow: "hidden",
+                  background: "#090909",
+                  border: isActive
+                    ? "1px solid rgba(255,255,255,0.15)"
+                    : "1px solid rgba(255,255,255,0.08)",
+                  boxShadow: isActive
+                    ? "0 30px 100px rgba(0,0,0,0.36)"
+                    : "0 18px 60px rgba(0,0,0,0.22)",
+                  cursor: isActive
+                    ? "grab"
+                    : isSideCard
+                      ? "pointer"
+                      : "default",
+                  pointerEvents: isHidden ? "none" : "auto",
+                  transformStyle: "preserve-3d",
+                  willChange: "transform, opacity, filter",
                 }}
-              />
+                whileTap={isActive ? { cursor: "grabbing" } : undefined}
+              >
+                {p.image ? (
+                  <motion.img
+                    src={p.image}
+                    alt={p.name}
+                    animate={{
+                      scale: isActive ? 1.025 : 1.06,
+                    }}
+                    transition={{
+                      duration: 1.1,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      objectPosition: "center",
+                      display: "block",
+                      userSelect: "none",
+                      pointerEvents: "none",
+                    }}
+                    draggable={false}
+                  />
+                ) : (
+                  <ImagePlaceholder name={p.name} />
+                )}
 
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background:
-                    "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.58) 26%, rgba(0,0,0,0.16) 54%, transparent 76%)",
-                  zIndex: 2,
-                  pointerEvents: "none",
-                }}
-              />
-
-              {!isActive && (
+                {/* Neutral overlays only. No violet shade. */}
                 <div
                   style={{
                     position: "absolute",
                     inset: 0,
-                    background: "rgba(0,0,0,0.34)",
-                    zIndex: 3,
+                    background:
+                      "linear-gradient(to bottom, rgba(0,0,0,0.28) 0%, transparent 34%)",
+                    zIndex: 2,
                     pointerEvents: "none",
                   }}
                 />
-              )}
 
-              {/* Active product text */}
-              {isActive && (
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={`text-${p.id}`}
-                    variants={textContainerVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background:
+                      "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.58) 26%, rgba(0,0,0,0.16) 54%, transparent 76%)",
+                    zIndex: 2,
+                    pointerEvents: "none",
+                  }}
+                />
+
+                {!isActive && (
+                  <div
                     style={{
                       position: "absolute",
-                      left: "clamp(1.4rem, 3vw, 3rem)",
-                      bottom: "clamp(3.4rem, 7vh, 5.2rem)",
-                      zIndex: 10,
-                      maxWidth: "min(780px, 72vw)",
+                      inset: 0,
+                      background: "rgba(0,0,0,0.34)",
+                      zIndex: 3,
                       pointerEvents: "none",
                     }}
-                  >
-                    <div style={{ overflow: "hidden" }}>
-                      {p.name.split(" ").map((word, wi) => (
-                        <motion.span
-                          key={wi}
-                          variants={textItemVariants}
-                          style={{
-                            display: "inline-block",
-                            fontSize: "clamp(1.6rem, 3vw, 3.4rem)",
-                            fontWeight: 950,
-                            color: "#fff",
-                            letterSpacing: "-0.055em",
-                            lineHeight: 0.9,
-                            marginRight: "0.23em",
-                            textTransform: "uppercase",
-                            textShadow: "0 8px 34px rgba(0,0,0,0.45)",
-                          }}
-                        >
-                          {word}
-                        </motion.span>
-                      ))}
-                    </div>
+                  />
+                )}
 
-                    <motion.p
-                      variants={textItemVariants}
+                {/* Active product text */}
+                {isActive && (
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`text-${p.id}`}
+                      variants={textContainerVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
                       style={{
-                        marginTop: "1.35rem",
-                        marginBottom: 0,
-                        fontSize: "clamp(15px, 1.4vw, 18px)",
-                        color: "rgba(255,255,255,0.76)",
-                        fontWeight: 300,
-                        lineHeight: 1.65,
-                        maxWidth: "560px",
-                        textShadow: "0 4px 20px rgba(0,0,0,0.45)",
+                        position: "absolute",
+                        left: "clamp(1.4rem, 3vw, 3rem)",
+                        bottom: "clamp(3.4rem, 7vh, 5.2rem)",
+                        zIndex: 10,
+                        maxWidth: "min(780px, 72vw)",
+                        pointerEvents: "none",
                       }}
                     >
-                      {p.tagline}
-                    </motion.p>
-                  </motion.div>
-                </AnimatePresence>
-              )}
-            </motion.article>
-          );
-        })}
+                      <div style={{ overflow: "hidden" }}>
+                        {p.name.split(" ").map((word, wi) => (
+                          <motion.span
+                            key={wi}
+                            variants={textItemVariants}
+                            style={{
+                              display: "inline-block",
+                              fontSize: "clamp(1.6rem, 3vw, 3.4rem)",
+                              fontWeight: 950,
+                              color: "#fff",
+                              letterSpacing: "-0.055em",
+                              lineHeight: 0.9,
+                              marginRight: "0.23em",
+                              textTransform: "uppercase",
+                              textShadow: "0 8px 34px rgba(0,0,0,0.45)",
+                            }}
+                          >
+                            {word}
+                          </motion.span>
+                        ))}
+                      </div>
 
-        {/* ── Top heading ─────────────────────────────────────── */}
-        <div
-          style={{
-            position: "absolute",
-            top: "clamp(1.4rem, 3vw, 2.4rem)",
-            left: "clamp(1.4rem, 3vw, 3rem)",
-            zIndex: 60,
-            display: "flex",
-            alignItems: "center",
-            gap: "14px",
-            pointerEvents: "none",
-          }}
-        >
+                      {/* <motion.p
+                        variants={textItemVariants}
+                        style={{
+                          marginTop: "1.35rem",
+                          marginBottom: 0,
+                          fontSize: "clamp(15px, 1.4vw, 18px)",
+                          color: "rgba(255,255,255,0.76)",
+                          fontWeight: 300,
+                          lineHeight: 1.65,
+                          maxWidth: "560px",
+                          textShadow: "0 4px 20px rgba(0,0,0,0.45)",
+                        }}
+                      >
+                        {p.tagline}
+                      </motion.p> */}
+                    </motion.div>
+                  </AnimatePresence>
+                )}
+              </motion.article>
+            );
+          })}
+
+          {/* ── Counter ───────────────────────────────────────── */}
           <div
             style={{
-              height: "2px",
-              width: "38px",
-              background: "#ffffff",
-              borderRadius: "999px",
-              boxShadow: "0 0 18px rgba(255,255,255,0.28)",
-            }}
-          />
-
-          <span
-            style={{
-              fontSize: "12px",
-              fontWeight: 800,
-              letterSpacing: "0.22em",
-              textTransform: "uppercase",
-              color: "rgba(255,255,255,0.7)",
-            }}
-          >
-            Our Range
-          </span>
-        </div>
-
-        {/* ── Counter ─────────────────────────────────────────── */}
-        <div
-          style={{
-            position: "absolute",
-            top: "clamp(1.4rem, 3vw, 2.4rem)",
-            right: "clamp(1.4rem, 3vw, 3rem)",
-            zIndex: 60,
-            display: "flex",
-            alignItems: "baseline",
-            gap: "5px",
-            pointerEvents: "none",
-          }}
-        >
-          <span
-            style={{
-              fontSize: "24px",
-              fontWeight: 950,
-              color: "#fff",
-              lineHeight: 1,
-            }}
-          >
-            {String(index + 1).padStart(2, "0")}
-          </span>
-
-          <span
-            style={{
-              fontSize: "13px",
-              color: "rgba(255,255,255,0.38)",
-              fontFamily: "monospace",
-            }}
-          >
-            /{String(total).padStart(2, "0")}
-          </span>
-        </div>
-
-        {/* ── Arrows ──────────────────────────────────────────── */}
-        <div
-          style={{
-            position: "absolute",
-            right: "clamp(1.4rem, 3vw, 3rem)",
-            bottom: "clamp(1.5rem, 3vw, 2.6rem)",
-            zIndex: 70,
-            display: "flex",
-            gap: "10px",
-          }}
-        >
-          <motion.button
-            type="button"
-            onClick={() => {
-              pauseBriefly();
-              prev();
-            }}
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.94 }}
-            aria-label="Previous product"
-            style={{
-              width: "52px",
-              height: "52px",
-              borderRadius: "50%",
-              background: "rgba(255,255,255,0.12)",
-              border: "1px solid rgba(255,255,255,0.22)",
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
+              position: "absolute",
+              top: "clamp(1.4rem, 3vw, 2.4rem)",
+              right: "clamp(1.4rem, 3vw, 3rem)",
+              zIndex: 60,
               display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "#fff",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.22)",
+              alignItems: "baseline",
+              gap: "5px",
+              pointerEvents: "none",
             }}
           >
-            <ChevronLeft style={{ width: "22px", height: "22px" }} />
-          </motion.button>
+            <span
+              style={{
+                fontSize: "24px",
+                fontWeight: 950,
+                color: "#fff",
+                lineHeight: 1,
+              }}
+            >
+              {String(index + 1).padStart(2, "0")}
+            </span>
 
-          <motion.button
-            type="button"
-            onClick={() => {
-              pauseBriefly();
-              next();
-            }}
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.94 }}
-            aria-label="Next product"
+            <span
+              style={{
+                fontSize: "13px",
+                color: "rgba(255,255,255,0.38)",
+                fontFamily: "monospace",
+              }}
+            >
+              /{String(total).padStart(2, "0")}
+            </span>
+          </div>
+
+          {/* ── Arrows ────────────────────────────────────────── */}
+          <div
             style={{
-              width: "52px",
-              height: "52px",
-              borderRadius: "50%",
-              background: "#ffffff",
-              border: "1px solid rgba(255,255,255,0.8)",
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
+              position: "absolute",
+              right: "clamp(1.4rem, 3vw, 3rem)",
+              bottom: "clamp(1.5rem, 3vw, 2.6rem)",
+              zIndex: 70,
               display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "#080808",
-              boxShadow: "0 10px 32px rgba(0,0,0,0.28)",
+              gap: "10px",
             }}
           >
-            <ChevronRight style={{ width: "22px", height: "22px" }} />
-          </motion.button>
-        </div>
-
-        {/* ── Centered dots only ──────────────────────────────── */}
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            bottom: "1.45rem",
-            transform: "translateX(-50%)",
-            zIndex: 65,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-          }}
-        >
-          {PRODUCTS.map((p, i) => (
-            <button
-              key={p.id}
+            <motion.button
               type="button"
               onClick={() => {
                 pauseBriefly();
-                goTo(i);
+                prev();
               }}
-              aria-label={`Go to ${p.name}`}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.94 }}
+              aria-label="Previous product"
               style={{
-                width: i === index ? "24px" : "8px",
-                height: "8px",
-                borderRadius: "999px",
-                background: i === index ? "#ffffff" : "rgba(255,255,255,0.35)",
-                border: "none",
+                width: "52px",
+                height: "52px",
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.12)",
+                border: "1px solid rgba(255,255,255,0.22)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 cursor: "pointer",
-                padding: 0,
-                transition:
-                  "width 0.35s cubic-bezier(0.22,1,0.36,1), background 0.25s, opacity 0.25s",
+                color: "#fff",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.22)",
               }}
-            />
-          ))}
+            >
+              <ChevronLeft style={{ width: "22px", height: "22px" }} />
+            </motion.button>
+
+            <motion.button
+              type="button"
+              onClick={() => {
+                pauseBriefly();
+                next();
+              }}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.94 }}
+              aria-label="Next product"
+              style={{
+                width: "52px",
+                height: "52px",
+                borderRadius: "50%",
+                background: "#ffffff",
+                border: "1px solid rgba(255,255,255,0.8)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: "#080808",
+                boxShadow: "0 10px 32px rgba(0,0,0,0.28)",
+              }}
+            >
+              <ChevronRight style={{ width: "22px", height: "22px" }} />
+            </motion.button>
+          </div>
+
+          {/* ── Centered dots only ────────────────────────────── */}
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: "1.45rem",
+              transform: "translateX(-50%)",
+              zIndex: 65,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+            }}
+          >
+            {PRODUCTS.map((p, i) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  pauseBriefly();
+                  goTo(i);
+                }}
+                aria-label={`Go to ${p.name}`}
+                style={{
+                  width: i === index ? "24px" : "8px",
+                  height: "8px",
+                  borderRadius: "999px",
+                  background:
+                    i === index ? "#ffffff" : "rgba(255,255,255,0.35)",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                  transition:
+                    "width 0.35s cubic-bezier(0.22,1,0.36,1), background 0.25s, opacity 0.25s",
+                }}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>

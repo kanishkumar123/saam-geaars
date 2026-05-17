@@ -860,7 +860,11 @@ function ManufacturingJourney() {
     // Transparent section — gears visible (item 3)
     <section
       id="process"
-      style={{ padding: "8rem 1.5rem", position: "relative", zIndex: 5 }}
+      style={{
+        padding: "4rem 1.5rem 0rem 0rem",
+        position: "relative",
+        zIndex: 5,
+      }}
     >
       <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
         <FadeIn>
@@ -1065,7 +1069,11 @@ function ProductsSection() {
   return (
     <section
       id="products"
-      style={{ padding: "8rem 1.5rem", borderTop: "1px solid var(--border-1)" }}
+      style={{
+        padding: "4rem 1.5rem",
+        borderTop: "1px solid var(--border-1)",
+        borderBottom: "1px solid var(--border-1)",
+      }}
     >
       <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
         <FadeIn>
@@ -1222,7 +1230,7 @@ function ContactSection() {
       id="contact"
       blurred
       style={{
-        padding: "8rem 1.5rem 5rem",
+        padding: "4rem 1.5rem 5rem",
         borderTop: "1px solid var(--border-2)",
       }}
     >
@@ -1438,10 +1446,10 @@ function ContactSection() {
                 marginBottom: "2px",
               }}
             >
-              Precision Engineering since 2001
+              Symbol of Quality since 2001
             </p>
             <p style={{ fontSize: "13px", color: "var(--text-3)" }}>
-              © 2026 Saam Geaars. All rights reserved.
+              © {new Date().getFullYear()} Saam Geaars. All rights reserved.
             </p>
           </div>
         </div>
@@ -1530,21 +1538,26 @@ function InnerApp() {
         <IndustryMarquee />
         {/* About: blurred — gears softly visible */}
         <AboutSection />
+        <ManufacturingJourney />
         <StatsBanner />
         <SectionDivider />
-        <ProductShowcaseFullBleed />
         <CertificationsBadges />
+
         <SectionDivider />
-        <TestimonialsCarousel />
+        {/* <TestimonialsCarousel /> */}
         {/* WhySaamSection REMOVED (item 5) */}
-        <SectionDivider label="Our Process" />
+        {/* <SectionDivider label="Our Process" /> */}
         {/* Process: transparent — gears fully visible behind frosted cards */}
-        <ManufacturingJourney />
+
         {/* Products: transparent — gears visible */}
         <ProductsSection />
+        <SectionDivider />
         {/* Gallery: blurred — gears softly visible */}
+        <ProductShowcaseFullBleed />
+        <SectionDivider />
         <GalleryLightbox />
         {/* Contact: blurred — gears softly visible */}
+        <SectionDivider />
         <ContactSection />
       </div>
     </div>

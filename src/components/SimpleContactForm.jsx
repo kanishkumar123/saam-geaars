@@ -232,7 +232,7 @@ export default function SimpleContactForm() {
               name="phone"
               value={form.phone}
               onChange={handleChange}
-              placeholder="+91 98765 43210"
+              placeholder="+91 98430 XXXXX"
               type="tel"
               required
             />

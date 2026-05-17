@@ -14,14 +14,14 @@ import infra4 from "../assets/infra4.jpeg";
 const IMAGES = [
   {
     id: "img1",
-    title: "Factory Building",
+    title: "Unit 1",
     caption: "Exterior view of our manufacturing facility",
     url: infra1,
   },
   {
     id: "img2",
-    title: "Factory Infrastructure",
-    caption: "Factory building and industrial workspace",
+    title: "Unit 2",
+    caption: "Interior view of our manufacturing facility",
     url: infra2,
   },
   {
@@ -223,7 +223,7 @@ export function GalleryLightbox() {
     <section id="facility" className="gallery-section">
       <style>{`
         .gallery-section {
-          padding: 8rem 1.5rem;
+          padding: 4rem 1.5rem;
           border-top: 1px solid var(--border-1);
           background: color-mix(in srgb, var(--bg-section) 85%, transparent);
           backdrop-filter: blur(12px);
@@ -292,7 +292,7 @@ export function GalleryLightbox() {
 
         .gallery-card {
           position: relative;
-          min-height: 280px;
+          min-height: 350px;
           overflow: hidden;
           border-radius: 18px;
           background: var(--bg-card);

@@ -464,7 +464,7 @@ export function QuoteForm() {
                     key: "phone",
                     label: "Phone Number",
                     type: "tel",
-                    ph: "+91 98765 43210",
+                    ph: "+91 98430 XXXXX",
                   },
                   {
                     key: "email",

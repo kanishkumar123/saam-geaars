@@ -334,8 +334,9 @@ export function CertificationsBadges() {
   return (
     <section
       style={{
-        padding: "8rem 1.5rem",
+        padding: "4rem 1.5rem",
         borderTop: "1px solid var(--border-1)",
+        borderBottom: "1px solid var(--border-1)",
         transition: "background 0.4s",
       }}
     >
