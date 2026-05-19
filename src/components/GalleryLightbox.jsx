@@ -24,18 +24,6 @@ const IMAGES = [
     caption: "Interior view of our manufacturing facility",
     url: infra2,
   },
-  {
-    id: "img3",
-    title: "Gear Wheel",
-    caption: "Precision-manufactured gear wheel component",
-    url: infra3,
-  },
-  {
-    id: "img4",
-    title: "6 Row Special 10T Sprocket",
-    caption: "Specialized 6 row 10T sprocket component",
-    url: infra4,
-  },
 ];
 
 const lightboxVariants = {

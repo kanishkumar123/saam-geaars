@@ -845,7 +845,7 @@ function ManufacturingJourney() {
     {
       id: "03",
       title: "Heat Treatment",
-      desc: "Carburizing, case hardening, and induction hardening are performed in-house — not outsourced. This gives us full metallurgical traceability and consistent case depths critical for high-torque applications.",
+      desc: "Carburizing, case hardening, and induction hardening are performed. This gives us full metallurgical traceability and consistent case depths critical for high-torque applications.",
       icon: Flame,
     },
     {
