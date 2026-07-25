@@ -1,12 +1,3 @@
-// ─────────────────────────────────────────────
-// GearRatioCalculator.jsx
-// Full gear ratio + torque calculator replacing the basic TorqueCalculator.
-// Includes inline TorqueGauge arc dial.
-//
-// SLOT IN App.jsx:
-//   In the Hero section, replace <TorqueCalculator /> with:
-//     <GearRatioCalculator />
-// ─────────────────────────────────────────────
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Calculator, Settings } from "lucide-react";

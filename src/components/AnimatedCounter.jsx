@@ -1,14 +1,3 @@
-// ─────────────────────────────────────────────
-// AnimatedCounter.jsx
-// Counts from 0 → target when it enters the viewport.
-//
-// SLOT IN App.jsx:
-//   In the Company Profile section or StatsBanner:
-//     <AnimatedCounter to={9500} suffix=" Sq Ft" />
-//     <AnimatedCounter to={20} prefix="Est. " suffix="+" />
-//     <AnimatedCounter to={300} suffix=" HP" />
-//     <AnimatedCounter to={200} suffix="+ Clients" />
-// ─────────────────────────────────────────────
 import { useRef, useEffect } from "react";
 import { useMotionValue, useInView, animate } from "framer-motion";
 
@@ -32,7 +21,8 @@ export default function AnimatedCounter({
       ease: "easeOut",
       onUpdate(v) {
         if (displayRef.current) {
-          const rounded = decimals > 0 ? v.toFixed(decimals) : Math.round(v).toLocaleString();
+          const rounded =
+            decimals > 0 ? v.toFixed(decimals) : Math.round(v).toLocaleString();
           displayRef.current.textContent = `${prefix}${rounded}${suffix}`;
         }
       },
@@ -42,7 +32,9 @@ export default function AnimatedCounter({
 
   return (
     <span ref={ref} className={className}>
-      <span ref={displayRef}>{prefix}0{suffix}</span>
+      <span ref={displayRef}>
+        {prefix}0{suffix}
+      </span>
     </span>
   );
 }

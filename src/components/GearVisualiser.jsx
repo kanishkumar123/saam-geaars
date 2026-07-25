@@ -1,12 +1,3 @@
-// ─────────────────────────────────────────────
-// GearVisualiser.jsx
-// Two SVG gears spinning at the mathematically correct speed ratio.
-// Driver and driven teeth are adjustable with sliders.
-//
-// SLOT IN App.jsx:
-//   Add inside or after the #products section:
-//     <GearVisualiser />
-// ─────────────────────────────────────────────
 import { useState, useMemo } from "react";
 
 // Generates an SVG path string for a gear shape

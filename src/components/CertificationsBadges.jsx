@@ -12,7 +12,7 @@ const CERTIFICATIONS = [
     title: "BIS Certified",
     org: "Bureau of Indian Standards",
     description:
-      "Our products meet the quality and safety specifications mandated by the Bureau of Indian Standards — the national body responsible for standardisation, testing, and certification across India's manufacturing sector.",
+      "Our products meet the quality and safety specifications mandated by the Bureau of Indian Standards the national body responsible for standardisation, testing, and certification across India's manufacturing sector.",
     checks: [
       "Product quality conformance",
       "IS standard compliance verified",
@@ -26,7 +26,7 @@ const CERTIFICATIONS = [
     title: "MSME Registered",
     org: "Ministry of MSME, India",
     description:
-      "Registered as a Micro, Small and Medium Enterprise under the Ministry of MSME, Government of India — qualifying us for government procurement programmes, priority sector schemes, and export promotion incentives.",
+      "Registered as a Micro Enterprise under the Ministry of MSME, Government of India qualifying us for government procurement programmes, priority sector schemes, and export promotion incentives.",
     checks: [
       "Udyam Registration active",
       "Eligible for govt. tenders",
@@ -391,7 +391,8 @@ export function CertificationsBadges() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(420px, 100%), 1fr))",
             gap: "20px",
           }}
         >

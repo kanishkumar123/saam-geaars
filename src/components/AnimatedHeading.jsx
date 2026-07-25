@@ -1,8 +1,3 @@
-// ─────────────────────────────────────────────
-// AnimatedHeading.jsx  (v2 — style prop fixed)
-// Word-by-word blur + slide-up stagger reveal.
-// Accepts both className (Tailwind) and style (inline).
-// ─────────────────────────────────────────────
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 

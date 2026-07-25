@@ -1,15 +1,3 @@
-// App.jsx — Saam Geaars v5
-// All 10 requested changes applied:
-// 1. Hero full-width + engaging lower block (3 capability cards + violet stat bar)
-// 2. Marquee: gear/gearbox terms only
-// 3. Gears visible through most sections; blur only on About, Contact
-// 4. Certifications shimmer: hover-only (in CertificationsBadges.jsx)
-// 5. WhySaam section removed
-// 6. Process chips removed
-// 7. Engineering Output left-aligned
-// 8. Infrastructure left-aligned (in GalleryLightbox.jsx)
-// 9. SimpleContactForm with real web3forms key
-// 10. About reworked: quote-style, horizontal timeline, MD card
 import { useRef, useMemo, useState } from "react";
 import * as THREE from "three";
 import { motion, useScroll, useSpring } from "framer-motion";

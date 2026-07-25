@@ -1,15 +1,3 @@
-// ─────────────────────────────────────────────
-// FadeIn.jsx
-// Drop-in wrapper that fades + slides any element up on scroll.
-//
-// SLOT IN App.jsx:
-//   Wrap any section, card, or block:
-//     <FadeIn><YourComponent /></FadeIn>
-//   Stagger children by wrapping each in FadeIn with increasing delay:
-//     <FadeIn delay={0.1}><Card /></FadeIn>
-//     <FadeIn delay={0.2}><Card /></FadeIn>
-//     <FadeIn delay={0.3}><Card /></FadeIn>
-// ─────────────────────────────────────────────
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 

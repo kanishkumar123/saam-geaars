@@ -28,12 +28,6 @@ export function GoogleMap() {
       <iframe
         title="Saam Geaars Location"
         src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3916.3083166508013!2d77.05220067600749!3d11.01547825473691!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba85790b9429855%3A0xf933399e045a9514!2sSaam%20Geaars!5e0!3m2!1sen!2sin!4v1777043349017!5m2!1sen!2sin"
-        width="600"
-        height="450"
-        style="border:0;"
-        allowfullscreen=""
-        loading="lazy"
-        referrerpolicy="no-referrer-when-downgrade"
         width="100%"
         height="100%"
         style={{ border: 0, display: "block" }}

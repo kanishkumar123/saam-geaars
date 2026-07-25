@@ -136,6 +136,32 @@ export function ThemeProvider({ children }) {
           outline: 2px solid var(--brand);
           outline-offset: 2px;
         }
+
+        /* ── RESPONSIVE GRID HELPERS ─────────────────────── */
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 1024px) {
+  .grid-2col { grid-template-columns: 1.1fr 1fr; gap: 3rem; }
+}
+
+.footer-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .footer-row { flex-direction: row; justify-content: space-between; text-align: left; }
+}
+
+/* Global overflow guard — prevents any one section from
+   creating horizontal scroll on small screens */
+html, body, #root { overflow-x: hidden; max-width: 100%; }
+* { box-sizing: border-box; }
       `}</style>
       {children}
     </ThemeContext.Provider>
