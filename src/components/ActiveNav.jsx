@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, Menu, X } from "lucide-react";
 import { useTheme } from "./ThemeContext";
 import logoImg from "../assets/saam-geaars.png";
 
@@ -37,21 +37,35 @@ const Navbar = () => {
   const { isDark, toggleTheme } = useTheme();
   const activeSection = useActiveSection(SECTION_IDS);
   const activeHref = activeSection ? `#${activeSection}` : null;
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   // Custom smooth scroll handler
   const handleSmoothScroll = (e, href) => {
     e.preventDefault();
+
     if (href === "#top") {
       window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
+    } else {
+      const targetId = href.replace("#", "");
+      const elem = document.getElementById(targetId);
+      if (elem) {
+        elem.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
     }
-    const targetId = href.replace("#", "");
-    const elem = document.getElementById(targetId);
-    if (elem) {
-      elem.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
+
+    // Collapsing the mobile menu (its height-collapse animation reflows
+    // the fixed nav sitting at the scroll boundary) cancels an in-progress
+    // smooth scrollIntoView if triggered in the same tick. Wait for the
+    // scroll to actually finish before closing it.
+    if (typeof window !== "undefined" && "onscrollend" in window) {
+      window.addEventListener("scrollend", () => setMobileOpen(false), {
+        once: true,
       });
+    } else {
+      setTimeout(() => setMobileOpen(false), 900);
     }
   };
 
@@ -141,10 +155,36 @@ const Navbar = () => {
             })}
           </div>
 
-          {/* Right Controls: Theme Toggle Only */}
+          {/* Right Controls: Hamburger (mobile) + Theme Toggle */}
           <div className="flex items-center gap-3">
             <button
+              onClick={() => setMobileOpen((o) => !o)}
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileOpen}
+              className="flex md:hidden"
+              style={{
+                width: "38px",
+                height: "38px",
+                borderRadius: "50%",
+                border: "1px solid var(--border-2, rgba(0,0,0,0.1))",
+                background: "var(--bg-elevated, rgba(0,0,0,0.03))",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: "var(--text-2, #555)",
+                transition: "all 0.2s",
+              }}
+            >
+              {mobileOpen ? (
+                <X style={{ width: "17px", height: "17px" }} />
+              ) : (
+                <Menu style={{ width: "17px", height: "17px" }} />
+              )}
+            </button>
+
+            <button
               onClick={toggleTheme}
+              aria-label="Toggle theme"
               style={{
                 width: "38px",
                 height: "38px",
@@ -187,6 +227,55 @@ const Navbar = () => {
             </button>
           </div>
         </div>
+
+        {/* --- MOBILE DROPDOWN MENU (md and below only) --- */}
+        <AnimatePresence initial={false}>
+          {mobileOpen && (
+            <motion.div
+              key="mobile-menu"
+              className="md:hidden"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              style={{ overflow: "hidden" }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  padding: "4px 20px 20px",
+                  gap: "4px",
+                  borderTop: "1px solid var(--border-1, rgba(0,0,0,0.08))",
+                }}
+              >
+                {NAV_LINKS.map((link) => {
+                  const isActive = activeHref === link.href;
+                  return (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      onClick={(e) => handleSmoothScroll(e, link.href)}
+                      style={{
+                        padding: "12px 6px",
+                        fontSize: "14px",
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                        textDecoration: "none",
+                        color: isActive
+                          ? "var(--brand, #3b82f6)"
+                          : "var(--text-2, #666)",
+                      }}
+                    >
+                      {link.label}
+                    </a>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

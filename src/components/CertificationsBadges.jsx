@@ -33,6 +33,20 @@ const CERTIFICATIONS = [
       "Export promotion benefits",
     ],
   },
+  {
+    id: 3,
+    abbr: "ISO 9001",
+    sub: "2015",
+    title: "ISO 9001:2015 Certified",
+    org: "International Organization for Standardization",
+    description:
+      "Our quality management system is certified to ISO 9001:2015 covering design, manufacturing, and inspection processes — ensuring consistent product quality, traceability, and continuous improvement across every gear, gearbox, and sprocket we produce.",
+    checks: [
+      "Quality management system audited",
+      "Process traceability documented",
+      "Continuous improvement framework",
+    ],
+  },
 ];
 
 // ── Stamp seal component ─────────────────────────────────────────

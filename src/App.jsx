@@ -153,6 +153,7 @@ function HeroSection() {
   return (
     // Transparent — gears fully visible behind hero
     <section
+      className="hero-section"
       style={{
         minHeight: "100vh",
         display: "flex",
@@ -199,6 +200,7 @@ function HeroSection() {
           text={["Insightful", "Engineering."]}
           highlight="Engineering."
           as="h1"
+          className="hero-heading"
           style={{
             fontSize: "clamp(4.5rem, 12vw, 9.5rem)",
             fontWeight: 900,
@@ -598,6 +600,7 @@ function AboutSection() {
             {/* MD card */}
             <FadeIn delay={0.1}>
               <div
+                className="md-quote-card"
                 style={{
                   background: "var(--brand)",
                   borderRadius: "20px",
@@ -691,6 +694,7 @@ function AboutSection() {
             {/* Mission — compact 2-col grid */}
             <FadeIn delay={0.2}>
               <div
+                className="mission-panel"
                 style={{
                   background: "var(--bg-card)",
                   border: "1px solid var(--border-1)",
@@ -725,6 +729,7 @@ function AboutSection() {
 
                 {/* 3-column card grid */}
                 <div
+                  className="mission-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(3, 1fr)",
@@ -848,6 +853,7 @@ function ManufacturingJourney() {
     // Transparent section — gears visible (item 3)
     <section
       id="process"
+      className="process-section"
       style={{
         padding: "4rem 1.5rem 0rem 0rem",
         position: "relative",
@@ -933,9 +939,10 @@ function ManufacturingJourney() {
           {steps.map((step, index) => (
             <div
               key={index}
+              className="process-card"
               style={{
                 position: "sticky",
-                top: `calc(12vh + ${index * 2.5}rem)`,
+                top: `calc(12vh + ${index} * var(--process-step, 2.5rem))`,
                 // Frosted glass cards — gears show through softly behind cards (item 3)
                 background:
                   "color-mix(in srgb, var(--bg-card) 88%, transparent)",
@@ -957,6 +964,7 @@ function ManufacturingJourney() {
             >
               {/* Watermark number */}
               <div
+                className="process-watermark"
                 style={{
                   position: "absolute",
                   right: "1.5rem",
@@ -973,6 +981,7 @@ function ManufacturingJourney() {
               </div>
 
               <div
+                className="process-card-row"
                 style={{
                   position: "relative",
                   zIndex: 10,
@@ -1003,7 +1012,7 @@ function ManufacturingJourney() {
                     strokeWidth={1.5}
                   />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
                       fontSize: "12px",
@@ -1019,6 +1028,7 @@ function ManufacturingJourney() {
                   <AnimatedHeading
                     text={step.title}
                     as="h3"
+                    className="process-card-title"
                     style={{
                       fontSize: "clamp(2.2rem, 4.5vw, 3.2rem)",
                       fontWeight: 900,

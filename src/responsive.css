@@ -1,0 +1,60 @@
+/* Mobile-only overrides (max-width: 640px).
+   These exist to correct inline-style layouts that only break at small
+   viewports — they use !important because JSX inline styles otherwise
+   always win over stylesheet rules. Nothing here fires above 640px,
+   so desktop rendering is untouched. */
+
+@media (max-width: 640px) {
+  .hero-section {
+    padding: 140px 1.25rem 3rem !important;
+  }
+
+  .hero-heading {
+    font-size: clamp(2.6rem, 13vw, 4rem) !important;
+    line-height: 0.95 !important;
+    word-break: break-word;
+  }
+
+  .mission-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* The section itself has 0 left padding by design (only noticeable once
+     content no longer fills its 1000px max-width, i.e. below ~1024px) —
+     give it matching padding so cards don't hug the left edge. */
+  .process-section {
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+  }
+
+  .mission-panel {
+    padding: 1.5rem 1.25rem 1.25rem !important;
+  }
+
+  .md-quote-card {
+    padding: 1.75rem !important;
+  }
+
+  .process-card {
+    padding: 2rem 1.25rem !important;
+    /* Stacking icon above title (below) makes cards taller on mobile, so
+       widen the sticky top-offset step to keep the card-stack scroll
+       effect (each card peeking above the next) clearly visible. */
+    --process-step: 6.5rem;
+  }
+
+  .process-card-row {
+    flex-direction: column !important;
+    gap: 1.25rem !important;
+  }
+
+  .process-card-title {
+    font-size: clamp(1.7rem, 8vw, 2.4rem) !important;
+  }
+
+  .process-watermark {
+    font-size: 6rem !important;
+    bottom: -1rem !important;
+    right: 1rem !important;
+  }
+}
