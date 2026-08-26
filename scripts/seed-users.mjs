@@ -26,12 +26,12 @@ function loadEnv() {
 }
 
 const env = loadEnv();
-const SUPABASE_URL = env.VITE_SUPABASE_URL;
+const SUPABASE_URL = env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   console.error(
-    "Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env — fill in the service_role key from Supabase Dashboard -> Project Settings -> API before running this script.",
+    "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env — fill in the service_role key from Supabase Dashboard -> Project Settings -> API before running this script.",
   );
   process.exit(1);
 }

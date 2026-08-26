@@ -16,10 +16,13 @@ Deno.serve(async (req: Request) => {
   const authHeader = req.headers.get("Authorization") ?? "";
   const jwt = authHeader.replace("Bearer ", "");
   if (!jwt) {
-    return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Missing Authorization header" }),
+      {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -58,7 +61,13 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  let body: { email?: string; password?: string; role?: string; full_name?: string; username?: string };
+  let body: {
+    email?: string;
+    password?: string;
+    role?: string;
+    full_name?: string;
+    username?: string;
+  };
   try {
     body = await req.json();
   } catch {
@@ -70,17 +79,28 @@ Deno.serve(async (req: Request) => {
 
   const { email, password, role, full_name, username } = body;
 
-  if (!email || !password || !username || (role !== "admin" && role !== "staff")) {
+  if (
+    !email ||
+    !password ||
+    !username ||
+    (role !== "admin" && role !== "staff")
+  ) {
     return new Response(
-      JSON.stringify({ error: "email, password, username, and role ('admin' or 'staff') are required" }),
+      JSON.stringify({
+        error:
+          "email, password, username, and role ('admin' or 'staff') are required",
+      }),
       { status: 400, headers: { "Content-Type": "application/json" } },
     );
   }
   if (password.length < 6) {
-    return new Response(JSON.stringify({ error: "Password must be at least 6 characters" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Password must be at least 6 characters" }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   }
 
   const { data, error } = await adminClient.auth.admin.createUser({
@@ -110,8 +130,16 @@ Deno.serve(async (req: Request) => {
     new_values: { email, role, username, full_name: full_name || email },
   });
 
-  return new Response(JSON.stringify({ id: data.user.id, email: data.user.email, role, username }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify({
+      id: data.user.id,
+      email: data.user.email,
+      role,
+      username,
+    }),
+    {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 });
