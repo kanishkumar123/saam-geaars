@@ -1064,9 +1064,10 @@ function ManufacturingJourney() {
 // PRODUCTS — LEFT-aligned heading (item 7), transparent so gears show
 // ═══════════════════════════════════════════════════════════════════
 function ProductsSection() {
+  // No id="products" here — ProductShowcaseFullBleed below owns that id;
+  // two elements sharing it broke the nav's anchor scroll/highlight.
   return (
     <section
-      id="products"
       style={{
         padding: "4rem 1.5rem",
         borderTop: "1px solid var(--border-1)",
@@ -1515,8 +1516,14 @@ function InnerApp() {
             far={6}
           />
         </Canvas>
-        {/* Only left-edge gradient — right side stays open so gears show */}
+        {/* Only left-edge gradient — right side stays open so gears show.
+            On narrow viewports the hero text spans the full width instead
+            of just the left column, so a mobile-only override (see
+            ThemeContext.jsx) keeps the gradient opaque edge-to-edge there
+            instead of fading to transparent, so the gear model behind it
+            never washes out the text. */}
         <div
+          className="hero-gear-fade"
           style={{
             position: "absolute",
             inset: 0,

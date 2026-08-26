@@ -158,6 +158,28 @@ export function ThemeProvider({ children }) {
   .footer-row { flex-direction: row; justify-content: space-between; text-align: left; }
 }
 
+/* Anchor-nav target sections: without this, scrolling/jumping to a
+   section lands its heading right at the viewport top, directly behind
+   the fixed floating nav pill (which overlaps content by design). */
+#process, #products, #facility, #contact {
+  scroll-margin-top: 110px;
+}
+
+/* Hero text spans the full width on narrow screens (rather than just a
+   left column), so keep the gear-canvas gradient opaque edge-to-edge
+   there instead of fading to transparent — otherwise hero copy loses
+   contrast where it crosses the 3D gear model. */
+@media (max-width: 768px) {
+  .hero-gear-fade {
+    background: linear-gradient(
+      to bottom,
+      var(--canvas-grad-from) 0%,
+      var(--canvas-grad-mid) 55%,
+      var(--canvas-grad-mid) 100%
+    ) !important;
+  }
+}
+
 /* Global overflow guard — prevents any one section from
    creating horizontal scroll on small screens */
 html, body, #root { overflow-x: hidden; max-width: 100%; }
