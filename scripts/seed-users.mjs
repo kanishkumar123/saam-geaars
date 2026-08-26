@@ -26,12 +26,12 @@ function loadEnv() {
 }
 
 const env = loadEnv();
-const SUPABASE_URL = env.SUPABASE_URL;
+const SUPABASE_URL = env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   console.error(
-    "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env — fill in the service_role key from Supabase Dashboard -> Project Settings -> API before running this script.",
+    "Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env — fill in the service_role key from Supabase Dashboard -> Project Settings -> API before running this script.",
   );
   process.exit(1);
 }
@@ -41,8 +41,20 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 });
 
 const seedAccounts = [
-  { email: "admin@gmail.com", password: "123456", role: "admin", full_name: "Admin", username: "admin" },
-  { email: "staff@gmail.com", password: "123456", role: "staff", full_name: "Staff", username: "staff" },
+  {
+    email: "admin@gmail.com",
+    password: "123456",
+    role: "admin",
+    full_name: "Admin",
+    username: "admin",
+  },
+  {
+    email: "staff@gmail.com",
+    password: "123456",
+    role: "staff",
+    full_name: "Staff",
+    username: "staff",
+  },
 ];
 
 for (const account of seedAccounts) {
@@ -50,7 +62,11 @@ for (const account of seedAccounts) {
     email: account.email,
     password: account.password,
     email_confirm: true,
-    user_metadata: { role: account.role, full_name: account.full_name, username: account.username },
+    user_metadata: {
+      role: account.role,
+      full_name: account.full_name,
+      username: account.username,
+    },
   });
 
   if (error) {
@@ -62,7 +78,9 @@ for (const account of seedAccounts) {
     continue;
   }
 
-  console.log(`Created ${account.email} (role: ${account.role}, id: ${data.user.id})`);
+  console.log(
+    `Created ${account.email} (role: ${account.role}, id: ${data.user.id})`,
+  );
 }
 
 console.log("Done.");
