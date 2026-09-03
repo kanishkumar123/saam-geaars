@@ -83,6 +83,24 @@ export default function JobCardTile({ jc }) {
             {jc.tasks?.part_number}
           </span>
         </div>
+        {jc.tasks?.item_description && (
+          <div style={{ paddingLeft: "19px" }}>
+            <span
+              style={{
+                fontSize: "13px",
+                fontWeight: 500,
+                color: "var(--a-text-3)",
+                lineHeight: 1.35,
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {jc.tasks.item_description}
+            </span>
+          </div>
+        )}
       </div>
 
       <div

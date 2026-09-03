@@ -362,6 +362,8 @@ function CreateJobCardModal({ onClose, onCreated }) {
               value: p.id,
               label: p.po_number,
             }))}
+            searchable
+            searchPlaceholder="Search PO number…"
             required
           />
         </div>
@@ -375,6 +377,8 @@ function CreateJobCardModal({ onClose, onCreated }) {
               value: t.id,
               label: `${t.part_number} — ${t.item_description}`,
             }))}
+            searchable
+            searchPlaceholder="Search item / part number…"
             required
           />
         </div>

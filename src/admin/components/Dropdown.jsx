@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Search } from "lucide-react";
 
 // Shared custom dropdown — replaces native <select> everywhere. Trigger
 // shell uses the same neobrutalist border+offset-shadow language as inputs
@@ -14,10 +14,14 @@ export default function Dropdown({
   disabled = false,
   required = false,
   size = "md",
+  searchable = false,
+  searchPlaceholder = "Search…",
   style,
 }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const rootRef = useRef(null);
+  const searchRef = useRef(null);
   const small = size === "sm";
 
   useEffect(() => {
@@ -35,7 +39,23 @@ export default function Dropdown({
     };
   }, []);
 
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+    } else if (searchable) {
+      // Focus after the entrance animation starts so the menu is already
+      // mounted for the input to receive focus.
+      requestAnimationFrame(() => searchRef.current?.focus());
+    }
+  }, [open, searchable]);
+
   const selected = options.find((o) => String(o.value) === String(value));
+
+  const visibleOptions = useMemo(() => {
+    if (!searchable || !query.trim()) return options;
+    const q = query.trim().toLowerCase();
+    return options.filter((o) => String(o.label).toLowerCase().includes(q));
+  }, [options, query, searchable]);
 
   return (
     <div ref={rootRef} style={{ position: "relative", width: "100%", ...style }}>
@@ -97,14 +117,49 @@ export default function Dropdown({
               borderRadius: "var(--a-ctl-radius)",
               boxShadow: "var(--a-ctl-offset) var(--a-ctl-offset) 0 0 var(--a-ctl-shadow)",
               padding: "5px",
-              maxHeight: "260px",
-              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            {options.length === 0 && (
-              <div style={{ padding: "10px 12px", fontSize: "14.5px", color: "var(--a-text-3)" }}>No options</div>
+            {searchable && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "7px",
+                  padding: "7px 9px",
+                  marginBottom: "4px",
+                  borderBottom: "1px solid var(--a-border)",
+                }}
+              >
+                <Search size={13} color="var(--a-text-3)" style={{ flexShrink: 0 }} />
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  placeholder={searchPlaceholder}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    border: "none",
+                    outline: "none",
+                    background: "transparent",
+                    fontSize: "14.5px",
+                    fontFamily: "inherit",
+                    color: "var(--a-text-1)",
+                  }}
+                />
+              </div>
             )}
-            {options.map((o) => {
+            <div style={{ maxHeight: "260px", overflowY: "auto" }}>
+            {visibleOptions.length === 0 && (
+              <div style={{ padding: "10px 12px", fontSize: "14.5px", color: "var(--a-text-3)" }}>
+                {searchable && query.trim() ? "No matches" : "No options"}
+              </div>
+            )}
+            {visibleOptions.map((o) => {
               const isSelected = String(o.value) === String(value);
               return (
                 <button
@@ -138,6 +193,7 @@ export default function Dropdown({
                 </button>
               );
             })}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
