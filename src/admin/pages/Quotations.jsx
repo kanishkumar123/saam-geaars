@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, FileText, Trash2, Download, X } from "lucide-react";
+import { Plus, FileText, Trash2, Download, X, Pencil } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { useAdminUI, usePageTitle } from "../context/AdminUIContext";
@@ -23,6 +23,7 @@ export default function Quotations() {
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [exportingId, setExportingId] = useState(null);
   const [page, setPage] = useState(1);
@@ -105,6 +106,7 @@ export default function Quotations() {
                 quotation={qt}
                 exporting={exportingId === qt.id}
                 onExport={() => handleExport(qt)}
+                onEdit={isAdmin ? () => setEditTarget(qt) : null}
                 onDelete={isAdmin ? () => setDeleteTarget(qt) : null}
               />
             ))}
@@ -113,7 +115,17 @@ export default function Quotations() {
         </>
       )}
 
-      {modalOpen && <CreateQuotationModal onClose={() => setModalOpen(false)} onCreated={load} />}
+      {(modalOpen || editTarget) && (
+        <QuotationModal
+          key={editTarget?.id || "new"}
+          existing={editTarget}
+          onClose={() => {
+            setModalOpen(false);
+            setEditTarget(null);
+          }}
+          onSaved={load}
+        />
+      )}
 
       {deleteTarget && (
         <Modal title="Delete this quotation?" icon={Trash2} accent="var(--a-danger)" onClose={() => setDeleteTarget(null)} maxWidth="360px">
@@ -132,7 +144,9 @@ export default function Quotations() {
   );
 }
 
-function QuotationCard({ quotation, exporting, onExport, onDelete }) {
+const cardIconBtn = { background: "none", border: "none", color: "var(--a-text-3)", cursor: "pointer", padding: "4px" };
+
+function QuotationCard({ quotation, exporting, onExport, onEdit, onDelete }) {
   const total = (quotation.quotation_items || []).reduce(
     (sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unit_rate) || 0),
     0,
@@ -163,10 +177,19 @@ function QuotationCard({ quotation, exporting, onExport, onDelete }) {
             <div style={{ fontSize: "13px", color: "var(--a-text-3)" }}>{formatDisplayDate(quotation.quotation_date)}</div>
           </div>
         </div>
-        {onDelete && (
-          <button onClick={onDelete} aria-label="Delete" style={{ background: "none", border: "none", color: "var(--a-text-3)", cursor: "pointer", padding: "4px" }}>
-            <Trash2 size={15} />
-          </button>
+        {(onEdit || onDelete) && (
+          <div style={{ display: "flex", gap: "2px", flexShrink: 0 }}>
+            {onEdit && (
+              <button onClick={onEdit} aria-label="Edit" style={cardIconBtn}>
+                <Pencil size={14} />
+              </button>
+            )}
+            {onDelete && (
+              <button onClick={onDelete} aria-label="Delete" style={cardIconBtn}>
+                <Trash2 size={15} />
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -186,20 +209,44 @@ function QuotationCard({ quotation, exporting, onExport, onDelete }) {
   );
 }
 
-function CreateQuotationModal({ onClose, onCreated }) {
+function QuotationModal({ existing, onClose, onSaved }) {
+  const isEdit = !!existing;
   const [form, setForm] = useState({
-    quotation_number: "",
-    quotation_date: "",
-    client_name: "",
-    client_address: "",
-    staff_name: "",
-    subject: "",
-    enquiry_number: "",
-    delivery_time: "",
+    quotation_number: existing?.quotation_number || "",
+    quotation_date: existing?.quotation_date || "",
+    client_name: existing?.client_name || "",
+    client_address: existing?.client_address || "",
+    staff_name: existing?.staff_name || "",
+    subject: existing?.subject || "",
+    enquiry_number: existing?.enquiry_number || "",
+    delivery_time: existing?.delivery_time || "",
   });
-  const [items, setItems] = useState([{ ...EMPTY_ITEM }]);
+  const [items, setItems] = useState(() =>
+    existing?.quotation_items?.length
+      ? existing.quotation_items
+          .slice()
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map((it) => ({
+            item_description: it.item_description || "",
+            moc: it.moc || "",
+            quantity: it.quantity ?? "",
+            unit_rate: it.unit_rate ?? "",
+          }))
+      : [{ ...EMPTY_ITEM }],
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [companyOptions, setCompanyOptions] = useState([]);
+
+  useEffect(() => {
+    supabase
+      .from("companies")
+      .select("name")
+      .order("name", { ascending: true })
+      .then(({ data }) =>
+        setCompanyOptions((data || []).map((c) => ({ value: c.name, label: c.name }))),
+      );
+  }, []);
 
   function updateItem(idx, key, value) {
     setItems((rows) => rows.map((row, i) => (i === idx ? { ...row, [key]: value } : row)));
@@ -229,29 +276,43 @@ function CreateQuotationModal({ onClose, onCreated }) {
 
     setSaving(true);
 
-    const { data: quotation, error: qError } = await supabase
-      .from("quotations")
-      .insert({
-        quotation_number: form.quotation_number,
-        quotation_date: form.quotation_date,
-        client_name: form.client_name,
-        client_address: form.client_address || null,
-        staff_name: form.staff_name || null,
-        subject: form.subject || null,
-        enquiry_number: form.enquiry_number || null,
-        delivery_time: form.delivery_time || null,
-      })
-      .select()
-      .single();
+    const payload = {
+      quotation_number: form.quotation_number,
+      quotation_date: form.quotation_date,
+      client_name: form.client_name,
+      client_address: form.client_address || null,
+      staff_name: form.staff_name || null,
+      subject: form.subject || null,
+      enquiry_number: form.enquiry_number || null,
+      delivery_time: form.delivery_time || null,
+    };
 
-    if (qError) {
-      setError(qError.message);
-      setSaving(false);
-      return;
+    let quotationId = existing?.id;
+
+    if (isEdit) {
+      const { error: uError } = await supabase.from("quotations").update(payload).eq("id", quotationId);
+      if (uError) {
+        setError(uError.message);
+        setSaving(false);
+        return;
+      }
+      await supabase.from("quotation_items").delete().eq("quotation_id", quotationId);
+    } else {
+      const { data: quotation, error: qError } = await supabase
+        .from("quotations")
+        .insert(payload)
+        .select()
+        .single();
+      if (qError) {
+        setError(qError.message);
+        setSaving(false);
+        return;
+      }
+      quotationId = quotation.id;
     }
 
     const itemRows = validItems.map((it, idx) => ({
-      quotation_id: quotation.id,
+      quotation_id: quotationId,
       item_description: it.item_description,
       moc: it.moc || null,
       quantity: Number(it.quantity) || 0,
@@ -267,12 +328,12 @@ function CreateQuotationModal({ onClose, onCreated }) {
       return;
     }
 
-    onCreated();
+    onSaved();
     onClose();
   }
 
   return (
-    <Modal title="New quotation" icon={FileText} accent="var(--a-brand)" onClose={onClose} maxWidth="760px">
+    <Modal title={isEdit ? "Edit quotation" : "New quotation"} icon={FileText} accent="var(--a-brand)" onClose={onClose} maxWidth="760px">
       <form onSubmit={handleSubmit}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "1rem" }}>
           <div>
@@ -296,11 +357,15 @@ function CreateQuotationModal({ onClose, onCreated }) {
 
         <div style={{ marginBottom: "1rem" }}>
           <label style={labelStyle}>Client name *</label>
-          <input
-            value={form.client_name}
-            onChange={(e) => setForm((v) => ({ ...v, client_name: e.target.value }))}
+          <Dropdown
+            searchable
+            creatable
             required
-            style={{ width: "100%" }}
+            value={form.client_name}
+            onChange={(val) => setForm((v) => ({ ...v, client_name: val }))}
+            options={companyOptions}
+            placeholder="Select or type client…"
+            searchPlaceholder="Search companies…"
           />
         </div>
 
@@ -428,7 +493,7 @@ function CreateQuotationModal({ onClose, onCreated }) {
         {error && <div style={{ color: "var(--a-danger)", fontSize: "14.5px", marginBottom: "1rem" }}>{error}</div>}
 
         <Button type="submit" disabled={saving} style={{ width: "100%" }}>
-          {saving ? "Creating…" : "Create quotation"}
+          {saving ? "Saving…" : isEdit ? "Save changes" : "Create quotation"}
         </Button>
       </form>
     </Modal>

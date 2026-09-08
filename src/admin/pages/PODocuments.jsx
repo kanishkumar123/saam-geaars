@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, ShoppingCart, Trash2, Download, X } from "lucide-react";
+import { Plus, ShoppingCart, Trash2, Download, X, Pencil } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { useAdminUI, usePageTitle } from "../context/AdminUIContext";
 import Modal from "../components/Modal";
+import Dropdown from "../components/Dropdown";
 import DatePicker, { formatDisplayDate } from "../components/DatePicker";
 import Button from "../components/Button";
 import Pagination, { paginate } from "../components/Pagination";
@@ -21,6 +22,7 @@ export default function PODocuments() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [exportingId, setExportingId] = useState(null);
   const [page, setPage] = useState(1);
@@ -101,6 +103,7 @@ export default function PODocuments() {
                 po={po}
                 exporting={exportingId === po.id}
                 onExport={() => handleExport(po)}
+                onEdit={isAdmin ? () => setEditTarget(po) : null}
                 onDelete={isAdmin ? () => setDeleteTarget(po) : null}
               />
             ))}
@@ -109,7 +112,17 @@ export default function PODocuments() {
         </>
       )}
 
-      {modalOpen && <CreatePOModal onClose={() => setModalOpen(false)} onCreated={load} />}
+      {(modalOpen || editTarget) && (
+        <POModal
+          key={editTarget?.id || "new"}
+          existing={editTarget}
+          onClose={() => {
+            setModalOpen(false);
+            setEditTarget(null);
+          }}
+          onSaved={load}
+        />
+      )}
 
       {deleteTarget && (
         <Modal title="Delete this purchase order?" icon={Trash2} accent="var(--a-danger)" onClose={() => setDeleteTarget(null)} maxWidth="360px">
@@ -128,7 +141,9 @@ export default function PODocuments() {
   );
 }
 
-function PODocumentCard({ po, exporting, onExport, onDelete }) {
+const cardIconBtn = { background: "none", border: "none", color: "var(--a-text-3)", cursor: "pointer", padding: "4px" };
+
+function PODocumentCard({ po, exporting, onExport, onEdit, onDelete }) {
   const total = (po.purchase_order_document_items || []).reduce(
     (sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unit_rate) || 0),
     0,
@@ -159,10 +174,19 @@ function PODocumentCard({ po, exporting, onExport, onDelete }) {
             <div style={{ fontSize: "13px", color: "var(--a-text-3)" }}>{formatDisplayDate(po.po_date)}</div>
           </div>
         </div>
-        {onDelete && (
-          <button onClick={onDelete} aria-label="Delete" style={{ background: "none", border: "none", color: "var(--a-text-3)", cursor: "pointer", padding: "4px" }}>
-            <Trash2 size={15} />
-          </button>
+        {(onEdit || onDelete) && (
+          <div style={{ display: "flex", gap: "2px", flexShrink: 0 }}>
+            {onEdit && (
+              <button onClick={onEdit} aria-label="Edit" style={cardIconBtn}>
+                <Pencil size={14} />
+              </button>
+            )}
+            {onDelete && (
+              <button onClick={onDelete} aria-label="Delete" style={cardIconBtn}>
+                <Trash2 size={15} />
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -184,17 +208,40 @@ function PODocumentCard({ po, exporting, onExport, onDelete }) {
   );
 }
 
-function CreatePOModal({ onClose, onCreated }) {
+function POModal({ existing, onClose, onSaved }) {
+  const isEdit = !!existing;
   const [form, setForm] = useState({
-    quotation_number: "",
-    po_date: "",
-    client_name: "",
-    client_address: "",
-    delivery_date: "",
+    quotation_number: existing?.quotation_number || "",
+    po_date: existing?.po_date || "",
+    client_name: existing?.client_name || "",
+    client_address: existing?.client_address || "",
+    delivery_date: existing?.delivery_date || "",
   });
-  const [items, setItems] = useState([{ ...EMPTY_ITEM }]);
+  const [items, setItems] = useState(() =>
+    existing?.purchase_order_document_items?.length
+      ? existing.purchase_order_document_items
+          .slice()
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map((it) => ({
+            item_description: it.item_description || "",
+            quantity: it.quantity ?? "",
+            unit_rate: it.unit_rate ?? "",
+          }))
+      : [{ ...EMPTY_ITEM }],
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [companyOptions, setCompanyOptions] = useState([]);
+
+  useEffect(() => {
+    supabase
+      .from("companies")
+      .select("name")
+      .order("name", { ascending: true })
+      .then(({ data }) =>
+        setCompanyOptions((data || []).map((c) => ({ value: c.name, label: c.name }))),
+      );
+  }, []);
 
   function updateItem(idx, key, value) {
     setItems((rows) => rows.map((row, i) => (i === idx ? { ...row, [key]: value } : row)));
@@ -224,26 +271,43 @@ function CreatePOModal({ onClose, onCreated }) {
 
     setSaving(true);
 
-    const { data: po, error: poError } = await supabase
-      .from("purchase_order_documents")
-      .insert({
-        quotation_number: form.quotation_number || null,
-        po_date: form.po_date,
-        client_name: form.client_name,
-        client_address: form.client_address || null,
-        delivery_date: form.delivery_date || null,
-      })
-      .select()
-      .single();
+    const payload = {
+      quotation_number: form.quotation_number || null,
+      po_date: form.po_date,
+      client_name: form.client_name,
+      client_address: form.client_address || null,
+      delivery_date: form.delivery_date || null,
+    };
 
-    if (poError) {
-      setError(poError.message);
-      setSaving(false);
-      return;
+    let poId = existing?.id;
+
+    if (isEdit) {
+      const { error: uError } = await supabase
+        .from("purchase_order_documents")
+        .update(payload)
+        .eq("id", poId);
+      if (uError) {
+        setError(uError.message);
+        setSaving(false);
+        return;
+      }
+      await supabase.from("purchase_order_document_items").delete().eq("po_document_id", poId);
+    } else {
+      const { data: po, error: poError } = await supabase
+        .from("purchase_order_documents")
+        .insert(payload)
+        .select()
+        .single();
+      if (poError) {
+        setError(poError.message);
+        setSaving(false);
+        return;
+      }
+      poId = po.id;
     }
 
     const itemRows = validItems.map((it, idx) => ({
-      po_document_id: po.id,
+      po_document_id: poId,
       item_description: it.item_description,
       quantity: Number(it.quantity) || 0,
       unit_rate: Number(it.unit_rate) || 0,
@@ -258,12 +322,12 @@ function CreatePOModal({ onClose, onCreated }) {
       return;
     }
 
-    onCreated();
+    onSaved();
     onClose();
   }
 
   return (
-    <Modal title="New purchase order" icon={ShoppingCart} accent="var(--a-brand)" onClose={onClose} maxWidth="720px">
+    <Modal title={isEdit ? "Edit purchase order" : "New purchase order"} icon={ShoppingCart} accent="var(--a-brand)" onClose={onClose} maxWidth="720px">
       <form onSubmit={handleSubmit}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "1rem" }}>
           <div>
@@ -282,11 +346,15 @@ function CreatePOModal({ onClose, onCreated }) {
 
         <div style={{ marginBottom: "1rem" }}>
           <label style={labelStyle}>Client name *</label>
-          <input
-            value={form.client_name}
-            onChange={(e) => setForm((v) => ({ ...v, client_name: e.target.value }))}
+          <Dropdown
+            searchable
+            creatable
             required
-            style={{ width: "100%" }}
+            value={form.client_name}
+            onChange={(val) => setForm((v) => ({ ...v, client_name: val }))}
+            options={companyOptions}
+            placeholder="Select or type supplier…"
+            searchPlaceholder="Search companies…"
           />
         </div>
 
@@ -373,7 +441,7 @@ function CreatePOModal({ onClose, onCreated }) {
         {error && <div style={{ color: "var(--a-danger)", fontSize: "14.5px", marginBottom: "1rem" }}>{error}</div>}
 
         <Button type="submit" disabled={saving} style={{ width: "100%" }}>
-          {saving ? "Creating…" : "Create purchase order"}
+          {saving ? "Saving…" : isEdit ? "Save changes" : "Create purchase order"}
         </Button>
       </form>
     </Modal>

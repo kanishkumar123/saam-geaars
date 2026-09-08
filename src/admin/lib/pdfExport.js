@@ -2,12 +2,19 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { COMPANY_INFO } from "./companyInfo";
 import { formatDisplayDate } from "../components/DatePicker";
+import { registerArchivo } from "./pdfFonts";
 import logoImg from "../../assets/saam-geaars.png";
 
-const BRAND = [124, 58, 237]; // matches --a-brand purple
-const INK = [26, 22, 33];
-const MUTED = [110, 102, 122];
-const BORDER = [225, 220, 235];
+// Swiss-minimalist system: monochrome ink, no accent colour, hairline rules
+// instead of boxed cells, generous margins, hierarchy carried by weight / size
+// / tracking alone. Everything aligns to the left margin or the right margin.
+const INK = [20, 20, 20]; // headings, body, strong rules
+const GRAPHITE = [92, 92, 92]; // secondary text — addresses, meta values
+const MUTED = [140, 140, 140]; // eyebrow labels, captions, footer
+const HAIRLINE = [223, 223, 223]; // row separators, thin dividers
+
+const MARGIN_X = 56;
+const PAGE_TOP = 54;
 
 let logoDataUrlPromise = null;
 function loadLogoDataUrl() {
@@ -33,217 +40,216 @@ function money(n) {
   return num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Shared letterhead: logo + company block on top, a brand rule beneath, and
-// the document title/number/date banner. Returns the y coordinate where the
-// caller's own content should start.
-function drawLetterhead(doc, { docTitle, docNumber, numberLabel, date, dateLabel, logoDataUrl }) {
+// Resolve one of three Archivo cuts, falling back to Helvetica when the font
+// files could not be embedded (doc.__archivo is set in the build fns).
+function setType(doc, weight, size, color) {
+  if (doc.__archivo) {
+    if (weight === "medium") doc.setFont("ArchivoMedium", "normal");
+    else if (weight === "bold") doc.setFont("Archivo", "bold");
+    else doc.setFont("Archivo", "normal");
+  } else {
+    doc.setFont("helvetica", weight === "bold" ? "bold" : "normal");
+  }
+  if (size != null) doc.setFontSize(size);
+  if (color) doc.setTextColor(...color);
+}
+
+// A right-aligned label/value list (letterhead meta, quotation attn block).
+// Labels sit at `labelX`, values are flush to the right margin.
+function drawMetaList(doc, y, rows, { labelX, rightX, lineHeight = 13 }) {
+  let my = y;
+  rows.forEach(([label, value]) => {
+    setType(doc, "medium", 7.5, MUTED);
+    doc.text(String(label).toUpperCase(), labelX, my, { charSpace: 1 });
+    setType(doc, "regular", 9, INK);
+    doc.text(String(value == null || value === "" ? "—" : value), rightX, my, { align: "right" });
+    my += lineHeight;
+  });
+  return my;
+}
+
+// Shared letterhead for both document types. Left: logo + wordmark + tagline.
+// Right: the full company contact block (address, phone, email, website, GSTIN),
+// right-aligned. A strong full-width rule, then the document title on the left
+// with its meta list on the right, closed by a hairline. Returns the y where
+// body content should start.
+function drawLetterhead(doc, { docTitle, meta, logoDataUrl }) {
   const pageWidth = doc.internal.pageSize.getWidth();
-  const marginX = 40;
-  let y = 42;
+  const rightX = pageWidth - MARGIN_X;
+  let y = PAGE_TOP;
 
   if (logoDataUrl) {
     try {
-      doc.addImage(logoDataUrl, "PNG", marginX, y - 8, 46, 46);
+      doc.addImage(logoDataUrl, "PNG", MARGIN_X, y, 34, 34);
     } catch {
       // ignore malformed image data — fall through without the logo
     }
   }
 
-  const textX = logoDataUrl ? marginX + 58 : marginX;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.setTextColor(...INK);
-  doc.text(COMPANY_INFO.name, textX, y + 6);
+  const textX = MARGIN_X + 48;
+  setType(doc, "bold", 15, INK);
+  doc.text(COMPANY_INFO.name.toUpperCase(), textX, y + 14, { charSpace: 1.3 });
+  setType(doc, "medium", 8, MUTED);
+  doc.text(COMPANY_INFO.tagline, textX, y + 26);
 
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(9);
-  doc.setTextColor(...MUTED);
-  doc.text(COMPANY_INFO.tagline, textX, y + 19);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  doc.setTextColor(...MUTED);
-  const infoLines = [
+  const contactLines = [
     ...COMPANY_INFO.addressLines,
-    `Ph: ${COMPANY_INFO.phones.join("  /  ")}`,
-    `${COMPANY_INFO.emails.join(", ")}   |   GSTIN: ${COMPANY_INFO.gst}`,
-  ];
-  let infoY = y + 31;
-  infoLines.forEach((line) => {
-    doc.text(line, textX, infoY);
-    infoY += 10.5;
-  });
-
-  y = Math.max(y + 46, infoY) + 14;
-
-  doc.setDrawColor(...BRAND);
-  doc.setLineWidth(2);
-  doc.line(marginX, y, pageWidth - marginX, y);
-  y += 26;
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.setTextColor(...BRAND);
-  doc.text(docTitle.toUpperCase(), marginX, y);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
-  doc.setTextColor(...INK);
-  const rightX = pageWidth - marginX;
-  doc.text(`${numberLabel}: ${docNumber || "—"}`, rightX, y - 5, { align: "right" });
-  doc.text(`${dateLabel}: ${date ? formatDisplayDate(date) : "—"}`, rightX, y + 9, { align: "right" });
-
-  y += 22;
-  doc.setDrawColor(...BORDER);
-  doc.setLineWidth(1);
-  doc.line(marginX, y, pageWidth - marginX, y);
-
-  return y + 20;
-}
-
-function drawPartyBlock(doc, y, { heading, name, addressLines, extraLines = [] }) {
-  const marginX = 40;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(...MUTED);
-  doc.text(heading.toUpperCase(), marginX, y);
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11.5);
-  doc.setTextColor(...INK);
-  doc.text(name || "—", marginX, y + 15);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
-  doc.setTextColor(...MUTED);
-  let ly = y + 30;
-  (addressLines || []).forEach((line) => {
-    const wrapped = doc.splitTextToSize(line, 260);
-    wrapped.forEach((w) => {
-      doc.text(w, marginX, ly);
-      ly += 12;
-    });
-  });
-  extraLines.forEach((line) => {
-    doc.text(line, marginX, ly);
-    ly += 12;
-  });
-
-  return ly + 10;
-}
-
-// Purchase-order-specific letterhead: company name/tagline on the left,
-// every other company detail moved to the right, then a large centered
-// document title beneath a divider (distinct from the Quotation layout,
-// which keeps everything in one left-aligned block).
-function drawPOHeader(doc, logoDataUrl) {
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const marginX = 40;
-  let y = 42;
-
-  if (logoDataUrl) {
-    try {
-      doc.addImage(logoDataUrl, "PNG", marginX, y - 8, 46, 46);
-    } catch {
-      // ignore malformed image data — fall through without the logo
-    }
-  }
-
-  const textX = logoDataUrl ? marginX + 58 : marginX;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(19);
-  doc.setTextColor(...INK);
-  doc.text(COMPANY_INFO.name, textX, y + 6);
-
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(9.5);
-  doc.setTextColor(...MUTED);
-  doc.text(COMPANY_INFO.tagline, textX, y + 20);
-
-  const rightX = pageWidth - marginX;
-  const rightLines = [
-    ...COMPANY_INFO.addressLines,
-    `Ph: ${COMPANY_INFO.phones.join("  /  ")}`,
-    COMPANY_INFO.emails.join(", "),
-    `GSTIN: ${COMPANY_INFO.gst}`,
+    `Ph: ${COMPANY_INFO.phones.join("   ·   ")}`,
+    COMPANY_INFO.emails.join("   ·   "),
     COMPANY_INFO.website,
-  ];
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  doc.setTextColor(...MUTED);
-  let rightY = y;
-  rightLines.forEach((line) => {
-    doc.text(line, rightX, rightY, { align: "right" });
-    rightY += 11.5;
+    `GSTIN: ${COMPANY_INFO.gst}`,
+  ].filter(Boolean);
+  setType(doc, "regular", 8.5, GRAPHITE);
+  let cy = y + 3;
+  contactLines.forEach((line) => {
+    doc.text(line, rightX, cy, { align: "right" });
+    cy += 11;
   });
 
-  y = Math.max(y + 34, rightY) + 16;
+  y = Math.max(y + 34, cy - 11) + 16;
+  doc.setDrawColor(...INK);
+  doc.setLineWidth(1.2);
+  doc.line(MARGIN_X, y, rightX, y);
+  y += 22;
 
-  doc.setDrawColor(...BRAND);
-  doc.setLineWidth(2);
-  doc.line(marginX, y, pageWidth - marginX, y);
-  y += 34;
+  setType(doc, "bold", 15, INK);
+  doc.text(docTitle.toUpperCase(), MARGIN_X, y, { charSpace: 1 });
+  const metaBottom = drawMetaList(doc, y - 4, meta, { labelX: rightX - 215, rightX });
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(24);
-  doc.setTextColor(...BRAND);
-  doc.text("PURCHASE ORDER", pageWidth / 2, y, { align: "center" });
-  y += 20;
-
-  doc.setDrawColor(...BORDER);
-  doc.setLineWidth(1);
-  doc.line(marginX, y, pageWidth - marginX, y);
+  y = Math.max(y, metaBottom - 13) + 14;
+  doc.setDrawColor(...HAIRLINE);
+  doc.setLineWidth(0.5);
+  doc.line(MARGIN_X, y, rightX, y);
 
   return y + 24;
 }
 
-function drawPOMeta(doc, y, po) {
+// A "party" block: eyebrow heading, name, then wrapped address lines.
+function drawPartyBlock(doc, y, { heading, name, addressLines, extraLines = [] }) {
+  setType(doc, "medium", 7.5, MUTED);
+  doc.text(heading.toUpperCase(), MARGIN_X, y, { charSpace: 1.2 });
+
+  setType(doc, "bold", 11.5, INK);
+  doc.text(name || "—", MARGIN_X, y + 16);
+
+  setType(doc, "regular", 9, GRAPHITE);
+  let ly = y + 31;
+  (addressLines || []).forEach((line) => {
+    doc.splitTextToSize(line, 280).forEach((w) => {
+      doc.text(w, MARGIN_X, ly);
+      ly += 12;
+    });
+  });
+  extraLines.forEach((line) => {
+    doc.text(line, MARGIN_X, ly);
+    ly += 12;
+  });
+
+  return ly + 8;
+}
+
+// Right-aligned totals stack: optional breakdown rows, a strong rule, then the
+// grand total in bold. Amounts are plain en-IN numbers; the grand total keeps
+// an "INR" prefix so the headline figure is unambiguous.
+function drawTotals(doc, y, rows, grandLabel, grandValue) {
   const pageWidth = doc.internal.pageSize.getWidth();
-  const marginX = 40;
-  const rightX = pageWidth - marginX;
+  const rightX = pageWidth - MARGIN_X;
+  const labelX = rightX - 210;
+  let ty = y;
 
-  const metaRows = [
-    ["Reference", `Quotation No. ${po.quotation_number || "—"}`],
-    ["Date", po.po_date ? formatDisplayDate(po.po_date) : "—"],
-    ["Delivery Date", po.delivery_date ? formatDisplayDate(po.delivery_date) : "—"],
-    ["Quotation Validity", "1 month"],
-  ];
-  let metaY = y + 15;
-  metaRows.forEach(([label, value]) => {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9.5);
-    doc.setTextColor(...MUTED);
-    doc.text(`${label}:`, rightX - 170, metaY, { align: "left" });
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...INK);
-    doc.text(String(value), rightX, metaY, { align: "right" });
-    metaY += 14;
+  rows.forEach(([label, value]) => {
+    setType(doc, "regular", 8.5, MUTED);
+    doc.text(String(label).toUpperCase(), labelX, ty, { charSpace: 0.6 });
+    setType(doc, "regular", 9.5, INK);
+    doc.text(money(value), rightX, ty, { align: "right" });
+    ty += 15;
   });
 
-  const partyBottomY = drawPartyBlock(doc, y, {
-    heading: "Vendor / Client",
-    name: po.client_name,
-    addressLines: (po.client_address || "").split("\n").filter(Boolean),
-  });
+  ty += rows.length ? 5 : 0;
+  doc.setDrawColor(...INK);
+  doc.setLineWidth(1);
+  doc.line(labelX, ty, rightX, ty);
+  ty += 17;
 
-  return Math.max(partyBottomY, metaY) + 10;
+  setType(doc, "bold", 10, INK);
+  doc.text(grandLabel.toUpperCase(), labelX, ty, { charSpace: 1.2 });
+  setType(doc, "bold", 12, INK);
+  doc.text(`INR ${money(grandValue)}`, rightX, ty, { align: "right" });
+
+  return ty + 10;
+}
+
+// Shared autotable config: "plain" theme (no cell boxes), header underlined
+// with a strong ink rule, body rows separated by a light hairline, first
+// column flush to the left margin.
+function itemsTableOptions(doc, startY, head, body, columnStyles) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const rightX = pageWidth - MARGIN_X;
+  return {
+    startY,
+    // top applies only to continuation pages (there is no letterhead there);
+    // bottom keeps rows clear of the footer rule.
+    margin: { left: MARGIN_X, right: MARGIN_X, top: PAGE_TOP, bottom: 64 },
+    head: [head],
+    body,
+    theme: "plain",
+    styles: {
+      font: doc.__archivo ? "Archivo" : "helvetica",
+      fontStyle: "normal",
+      fontSize: 9.5,
+      textColor: INK,
+      lineWidth: 0,
+      cellPadding: { top: 7, bottom: 7, left: 0, right: 12 },
+      valign: "top",
+    },
+    headStyles: {
+      font: doc.__archivo ? "Archivo" : "helvetica",
+      fontStyle: "bold",
+      fontSize: 8,
+      textColor: INK,
+      cellPadding: { top: 0, bottom: 9, left: 0, right: 12 },
+    },
+    columnStyles,
+    didParseCell: (data) => {
+      // mirror the body halign onto the header for numeric columns
+      const align = columnStyles[data.column.index]?.halign;
+      if (data.section === "head" && align) data.cell.styles.halign = align;
+    },
+    didDrawCell: (data) => {
+      if (data.column.index !== data.table.columns.length - 1) return;
+      const bottom = data.cell.y + data.cell.height;
+      if (data.section === "head") {
+        doc.setDrawColor(...INK);
+        doc.setLineWidth(1);
+        doc.line(MARGIN_X, bottom, rightX, bottom);
+      } else if (data.section === "body") {
+        doc.setDrawColor(...HAIRLINE);
+        doc.setLineWidth(0.4);
+        doc.line(MARGIN_X, bottom, rightX, bottom);
+      }
+    },
+  };
+}
+
+function drawCaption(doc, y) {
+  setType(doc, "regular", 7.5, MUTED);
+  doc.text("All amounts in Indian Rupees (INR)", MARGIN_X, y);
+  return y + 14;
 }
 
 function drawFooter(doc) {
   const pageCount = doc.internal.getNumberOfPages();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const marginX = 40;
+  const rightX = pageWidth - MARGIN_X;
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
-    doc.setDrawColor(...BORDER);
-    doc.setLineWidth(0.75);
-    doc.line(marginX, pageHeight - 46, pageWidth - marginX, pageHeight - 46);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(...MUTED);
-    doc.text(COMPANY_INFO.website, marginX, pageHeight - 32);
-    doc.text(`Page ${i} of ${pageCount}`, pageWidth - marginX, pageHeight - 32, { align: "right" });
+    doc.setDrawColor(...HAIRLINE);
+    doc.setLineWidth(0.5);
+    doc.line(MARGIN_X, pageHeight - 46, rightX, pageHeight - 46);
+    setType(doc, "regular", 7.5, MUTED);
+    doc.text(`${COMPANY_INFO.name}   ·   ${COMPANY_INFO.website}`, MARGIN_X, pageHeight - 32);
+    doc.text(`Page ${i} / ${pageCount}`, rightX, pageHeight - 32, { align: "right" });
   }
 }
 
@@ -251,49 +257,104 @@ function itemsTotal(items) {
   return items.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unit_rate) || 0), 0);
 }
 
+// Standard commercial terms printed on every quotation. "Delivery" is taken
+// from the quotation's own delivery_time when the user filled it in.
+const COMMERCIAL_TERMS = [
+  ["Price Basis", "Ex works, Coimbatore"],
+  ["Tax", "CGST-9%, SGST-9%"],
+  ["Delivery", "7 Weeks from the Date of PO."],
+  ["Freight", "To your scope"],
+  ["P & F", "Inclusive"],
+  ["Payment", "Against delivery"],
+  ["Validity", "One month"],
+];
+
+function drawCommercialTerms(doc, y, quotation) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const rightX = pageWidth - MARGIN_X;
+  const valueX = MARGIN_X + 128;
+
+  setType(doc, "bold", 9.5, INK);
+  doc.text("COMMERCIAL TERMS", MARGIN_X, y, { charSpace: 1 });
+  y += 7;
+  doc.setDrawColor(...HAIRLINE);
+  doc.setLineWidth(0.5);
+  doc.line(MARGIN_X, y, rightX, y);
+  y += 17;
+
+  COMMERCIAL_TERMS.forEach(([label, fallback], i) => {
+    const value =
+      label === "Delivery" && quotation.delivery_time
+        ? `${quotation.delivery_time} from the Date of PO.`
+        : fallback;
+    setType(doc, "regular", 9, GRAPHITE);
+    doc.text(`${i + 1}.   ${label}`, MARGIN_X, y);
+    setType(doc, "regular", 9, INK);
+    doc.text(`:   ${value}`, valueX, y);
+    y += 14;
+  });
+
+  y += 18;
+  setType(doc, "regular", 9, GRAPHITE);
+  doc.text(
+    "We trust our offer is inline and in order with your requirements. We look forward for your order placement.",
+    MARGIN_X,
+    y,
+    { maxWidth: rightX - MARGIN_X, lineHeightFactor: 1.45 },
+  );
+  y += 30;
+  doc.text(
+    "Thanking you and assuring you of our best and prompt services at all times.",
+    MARGIN_X,
+    y,
+    { maxWidth: rightX - MARGIN_X },
+  );
+
+  y += 26;
+  setType(doc, "regular", 7.5, MUTED);
+  doc.text(
+    "This is a computer-generated quotation and does not require a signature.",
+    MARGIN_X,
+    y,
+    { maxWidth: rightX - MARGIN_X },
+  );
+
+  return y + 16;
+}
+
 async function buildQuotationDoc(quotation, items) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const marginX = 40;
+  doc.__archivo = await registerArchivo(doc);
   const pageWidth = doc.internal.pageSize.getWidth();
+  const rightX = pageWidth - MARGIN_X;
   const logoDataUrl = await loadLogoDataUrl();
 
   let y = drawLetterhead(doc, {
     docTitle: "Quotation",
-    docNumber: quotation.quotation_number,
-    numberLabel: "Quotation No.",
-    date: quotation.quotation_date,
-    dateLabel: "Date",
+    meta: [
+      ["Quotation No.", quotation.quotation_number],
+      ["Date", quotation.quotation_date ? formatDisplayDate(quotation.quotation_date) : ""],
+    ],
     logoDataUrl,
   });
 
-  y = drawPartyBlock(doc, y, {
-    heading: "To",
+  const partyBottom = drawPartyBlock(doc, y, {
+    heading: "Bill To",
     name: quotation.client_name,
     addressLines: (quotation.client_address || "").split("\n").filter(Boolean),
   });
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
-  doc.setTextColor(...INK);
-  const metaRightX = pageWidth - marginX;
-  const metaTop = y - 55;
-  const metaRows = [
+  const attnRows = [
     ["Kind Attn.", quotation.staff_name],
     ["Subject", quotation.subject],
     ["Enquiry No.", quotation.enquiry_number],
-    ["Delivery Time", quotation.delivery_time],
   ].filter(([, v]) => v);
-  let metaY = metaTop;
-  metaRows.forEach(([label, value]) => {
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...MUTED);
-    doc.text(`${label}:`, metaRightX - 150, metaY, { align: "left" });
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...INK);
-    doc.text(String(value), metaRightX, metaY, { align: "right" });
-    metaY += 14;
-  });
-  y = Math.max(y, metaY) + 10;
+  const attnBottom = attnRows.length
+    ? drawMetaList(doc, y, attnRows, { labelX: rightX - 215, rightX, lineHeight: 14 })
+    : y;
+
+  y = Math.max(partyBottom, attnBottom + 2) + 16;
+  y = drawCaption(doc, y);
 
   const rows = items.map((it, idx) => {
     const qty = Number(it.quantity) || 0;
@@ -308,39 +369,33 @@ async function buildQuotationDoc(quotation, items) {
     ];
   });
 
-  autoTable(doc, {
-    startY: y,
-    margin: { left: marginX, right: marginX },
-    head: [["#", "Item Description", "MOC", "Qty", "Unit Rate", "Amount"]],
-    body: rows,
-    theme: "grid",
-    styles: { font: "helvetica", fontSize: 9.5, cellPadding: 7, textColor: INK, lineColor: BORDER, lineWidth: 0.75 },
-    headStyles: { fillColor: BRAND, textColor: [255, 255, 255], fontStyle: "bold" },
-    columnStyles: {
-      0: { cellWidth: 26, halign: "center" },
-      3: { cellWidth: 50, halign: "right" },
-      4: { cellWidth: 70, halign: "right" },
-      5: { cellWidth: 75, halign: "right" },
-    },
-    didDrawPage: () => {},
-  });
-
-  let afterTableY = doc.lastAutoTable.finalY + 18;
-  const total = itemsTotal(items);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.setTextColor(...INK);
-  doc.text(`Total: Rs. ${money(total)}`, pageWidth - marginX, afterTableY, { align: "right" });
-
-  afterTableY += 34;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(...MUTED);
-  doc.text(
-    "This is a system-generated quotation. Prices are subject to change without prior notice.",
-    marginX,
-    afterTableY,
+  autoTable(
+    doc,
+    itemsTableOptions(
+      doc,
+      y,
+      ["#", "Item Description", "MOC", "Qty", "Unit Rate", "Amount"],
+      rows,
+      {
+        0: { cellWidth: 22, textColor: MUTED },
+        1: { cellWidth: "auto" },
+        2: { cellWidth: 68 },
+        3: { cellWidth: 42, halign: "right" },
+        4: { cellWidth: 74, halign: "right" },
+        5: { cellWidth: 82, halign: "right" },
+      },
+    ),
   );
+
+  // Quotation intentionally carries no grand total — pricing is per line item
+  // and the commercial terms below govern the offer.
+  let afterTableY = doc.lastAutoTable.finalY + 24;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  if (afterTableY + 238 > pageHeight - 54) {
+    doc.addPage();
+    afterTableY = PAGE_TOP;
+  }
+  drawCommercialTerms(doc, afterTableY, quotation);
 
   drawFooter(doc);
   return doc;
@@ -348,12 +403,29 @@ async function buildQuotationDoc(quotation, items) {
 
 async function buildPurchaseOrderDoc(po, items) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const marginX = 40;
+  doc.__archivo = await registerArchivo(doc);
   const pageWidth = doc.internal.pageSize.getWidth();
+  const rightX = pageWidth - MARGIN_X;
   const logoDataUrl = await loadLogoDataUrl();
 
-  let y = drawPOHeader(doc, logoDataUrl);
-  y = drawPOMeta(doc, y, po);
+  let y = drawLetterhead(doc, {
+    docTitle: "Purchase Order",
+    meta: [
+      ["Ref. Quotation", po.quotation_number],
+      ["Date", po.po_date ? formatDisplayDate(po.po_date) : ""],
+      ["Delivery", po.delivery_date ? formatDisplayDate(po.delivery_date) : ""],
+      ["Validity", "1 month"],
+    ],
+    logoDataUrl,
+  });
+
+  y = drawPartyBlock(doc, y, {
+    heading: "Supplier",
+    name: po.client_name,
+    addressLines: (po.client_address || "").split("\n").filter(Boolean),
+  });
+  y += 8;
+  y = drawCaption(doc, y);
 
   const rows = items.map((it, idx) => {
     const qty = Number(it.quantity) || 0;
@@ -367,62 +439,39 @@ async function buildPurchaseOrderDoc(po, items) {
     ];
   });
 
-  autoTable(doc, {
-    startY: y,
-    margin: { left: marginX, right: marginX },
-    head: [["#", "Item Description", "Qty", "Unit Rate", "Amount"]],
-    body: rows,
-    theme: "grid",
-    styles: { font: "helvetica", fontSize: 9.5, cellPadding: 7, textColor: INK, lineColor: BORDER, lineWidth: 0.75 },
-    headStyles: { fillColor: BRAND, textColor: [255, 255, 255], fontStyle: "bold" },
-    columnStyles: {
-      0: { cellWidth: 26, halign: "center" },
-      2: { cellWidth: 60, halign: "right" },
+  autoTable(
+    doc,
+    itemsTableOptions(doc, y, ["#", "Item Description", "Qty", "Unit Rate", "Amount"], rows, {
+      0: { cellWidth: 22, textColor: MUTED },
+      1: { cellWidth: "auto" },
+      2: { cellWidth: 52, halign: "right" },
       3: { cellWidth: 80, halign: "right" },
-      4: { cellWidth: 85, halign: "right" },
-    },
-  });
+      4: { cellWidth: 88, halign: "right" },
+    }),
+  );
 
-  let afterTableY = doc.lastAutoTable.finalY + 18;
+  let afterTableY = doc.lastAutoTable.finalY + 22;
   const subtotal = itemsTotal(items);
   const cgst = subtotal * 0.09;
   const sgst = subtotal * 0.09;
-  const finalTotal = subtotal + cgst + sgst;
+  afterTableY = drawTotals(
+    doc,
+    afterTableY,
+    [
+      ["Subtotal", subtotal],
+      ["CGST @ 9%", cgst],
+      ["SGST @ 9%", sgst],
+    ],
+    "Total",
+    subtotal + cgst + sgst,
+  );
 
-  const totalsRows = [
-    ["Subtotal", subtotal],
-    ["CGST @ 9%", cgst],
-    ["SGST @ 9%", sgst],
-  ];
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
-  totalsRows.forEach(([label, value]) => {
-    doc.setTextColor(...MUTED);
-    doc.text(label, pageWidth - marginX - 150, afterTableY, { align: "left" });
-    doc.setTextColor(...INK);
-    doc.text(`Rs. ${money(value)}`, pageWidth - marginX, afterTableY, { align: "right" });
-    afterTableY += 15;
-  });
-
-  doc.setDrawColor(...BORDER);
-  doc.setLineWidth(1);
-  doc.line(pageWidth - marginX - 150, afterTableY, pageWidth - marginX, afterTableY);
-  afterTableY += 18;
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.setTextColor(...BRAND);
-  doc.text("Final Total", pageWidth - marginX - 150, afterTableY, { align: "left" });
-  doc.setTextColor(...INK);
-  doc.text(`Rs. ${money(finalTotal)}`, pageWidth - marginX, afterTableY, { align: "right" });
-
-  afterTableY += 40;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9.5);
-  doc.setTextColor(...INK);
-  doc.text("Authorized Signatory", pageWidth - marginX, afterTableY, { align: "right" });
-  doc.setDrawColor(...BORDER);
-  doc.line(pageWidth - marginX - 140, afterTableY - 14, pageWidth - marginX, afterTableY - 14);
+  afterTableY += 52;
+  doc.setDrawColor(...HAIRLINE);
+  doc.setLineWidth(0.5);
+  doc.line(rightX - 150, afterTableY, rightX, afterTableY);
+  setType(doc, "medium", 7.5, MUTED);
+  doc.text("AUTHORIZED SIGNATORY", rightX, afterTableY + 13, { align: "right", charSpace: 1 });
 
   drawFooter(doc);
   return doc;

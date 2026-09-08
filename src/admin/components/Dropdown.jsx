@@ -15,6 +15,7 @@ export default function Dropdown({
   required = false,
   size = "md",
   searchable = false,
+  creatable = false,
   searchPlaceholder = "Search…",
   style,
 }) {
@@ -50,12 +51,22 @@ export default function Dropdown({
   }, [open, searchable]);
 
   const selected = options.find((o) => String(o.value) === String(value));
+  // With `creatable`, a value typed in the past that isn't in the list still
+  // shows on the trigger instead of falling back to the placeholder.
+  const displayLabel = selected ? selected.label : creatable && value ? value : placeholder;
 
   const visibleOptions = useMemo(() => {
     if (!searchable || !query.trim()) return options;
     const q = query.trim().toLowerCase();
     return options.filter((o) => String(o.label).toLowerCase().includes(q));
   }, [options, query, searchable]);
+
+  const trimmedQuery = query.trim();
+  const showCreateOption =
+    creatable &&
+    searchable &&
+    trimmedQuery &&
+    !options.some((o) => String(o.label).toLowerCase() === trimmedQuery.toLowerCase());
 
   return (
     <div ref={rootRef} style={{ position: "relative", width: "100%", ...style }}>
@@ -70,7 +81,7 @@ export default function Dropdown({
           justifyContent: "space-between",
           gap: "8px",
           background: "var(--a-card)",
-          color: selected ? "var(--a-text-1)" : "var(--a-text-3)",
+          color: selected || (creatable && value) ? "var(--a-text-1)" : "var(--a-text-3)",
           border: "2px solid var(--a-ctl-border)",
           borderRadius: small ? "8px" : "var(--a-ctl-radius)",
           padding: small ? "6px 10px" : "12px 16px",
@@ -88,7 +99,7 @@ export default function Dropdown({
         }}
       >
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {selected ? selected.label : placeholder}
+          {displayLabel}
         </span>
         <ChevronDown size={small ? 13 : 15} style={{ flexShrink: 0, transition: "transform 0.18s ease", transform: open ? "rotate(180deg)" : "none", opacity: 0.7 }} />
       </button>
@@ -154,10 +165,37 @@ export default function Dropdown({
               </div>
             )}
             <div style={{ maxHeight: "260px", overflowY: "auto" }}>
-            {visibleOptions.length === 0 && (
+            {visibleOptions.length === 0 && !showCreateOption && (
               <div style={{ padding: "10px 12px", fontSize: "14.5px", color: "var(--a-text-3)" }}>
                 {searchable && query.trim() ? "No matches" : "No options"}
               </div>
+            )}
+            {showCreateOption && (
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(trimmedQuery);
+                  setOpen(false);
+                }}
+                className="admin-dd-option"
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "9px 11px",
+                  fontSize: "15.5px",
+                  border: "none",
+                  borderRadius: "7px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  fontFamily: "inherit",
+                  background: "transparent",
+                  color: "var(--a-text-1)",
+                }}
+              >
+                Use “{trimmedQuery}”
+              </button>
             )}
             {visibleOptions.map((o) => {
               const isSelected = String(o.value) === String(value);
