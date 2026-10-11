@@ -823,6 +823,17 @@ function DetailedView({ jobCard, stages }) {
                     : "Not started"}
                   {s.end_date && ` · Done ${formatDate(s.end_date)}`}
                 </div>
+                {s.remarks && s.status === "completed" && s.stage_type === "raw_material" && (
+                  <div
+                    style={{
+                      fontSize: "12.5px",
+                      color: "var(--a-text-2)",
+                      marginTop: "6px",
+                    }}
+                  >
+                    <strong>Raw material:</strong> {s.remarks}
+                  </div>
+                )}
                 {s.remarks && (s.status === "not_completed" || s.status === "on_process") && (
                   <div
                     style={{

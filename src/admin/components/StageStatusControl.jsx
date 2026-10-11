@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { PlayCircle, XCircle, CheckCircle2 } from "lucide-react";
 import { supabase, STAGE_LABELS } from "../lib/supabaseClient";
 import { formatDate } from "../lib/dateUtils";
 import Modal from "./Modal";
-import Dropdown from "./Dropdown";
 import DatePicker from "./DatePicker";
 import Button from "./Button";
 
@@ -170,55 +169,23 @@ function OnProcessModal({ stage, previousStageEndDate, onClose, onUpdated }) {
 
 function CompletedModal({ stage, isRawMaterial, completeLabel, onClose, onUpdated }) {
   const [date, setDate] = useState(todayISO());
-  const [materials, setMaterials] = useState([]);
-  const [materialId, setMaterialId] = useState("");
-  const [quantity, setQuantity] = useState("");
+  const [materialNote, setMaterialNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (isRawMaterial) {
-      supabase.from("raw_materials").select("id, name, stock_count").order("name").then(({ data }) => setMaterials(data || []));
-    }
-  }, [isRawMaterial]);
-
   async function handleConfirm() {
     setError("");
-    if (isRawMaterial) {
-      const qty = Number(quantity);
-      if (!materialId) {
-        setError("Select a raw material");
-        return;
-      }
-      if (!qty || qty <= 0) {
-        setError("Quantity used must be greater than zero");
-        return;
-      }
-      setSaving(true);
-      const { error } = await supabase.rpc("deduct_raw_material_stock", {
-        p_stage_id: stage.id,
-        p_raw_material_id: materialId,
-        p_quantity: qty,
-        p_status_date: date,
-      });
-      setSaving(false);
-      if (error) {
-        setError(error.message);
-        return;
-      }
-    } else {
-      setSaving(true);
-      const { error } = await supabase.rpc("update_job_card_stage_status", {
-        p_stage_id: stage.id,
-        p_status: "completed",
-        p_date: date,
-        p_remarks: null,
-      });
-      setSaving(false);
-      if (error) {
-        setError(error.message);
-        return;
-      }
+    setSaving(true);
+    const { error } = await supabase.rpc("update_job_card_stage_status", {
+      p_stage_id: stage.id,
+      p_status: "completed",
+      p_date: date,
+      p_remarks: isRawMaterial ? materialNote.trim() || null : null,
+    });
+    setSaving(false);
+    if (error) {
+      setError(error.message);
+      return;
     }
     onUpdated();
     onClose();
@@ -231,22 +198,16 @@ function CompletedModal({ stage, isRawMaterial, completeLabel, onClose, onUpdate
       </p>
 
       {isRawMaterial && (
-        <>
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "block", fontSize: "14.5px", color: "var(--a-text-2)", marginBottom: "6px" }}>Raw material *</label>
-            <Dropdown
-              value={materialId}
-              onChange={setMaterialId}
-              options={materials.map((m) => ({ value: m.id, label: `${m.name} (${m.stock_count} in stock)` }))}
-              placeholder="Select material…"
-              required
-            />
-          </div>
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "block", fontSize: "14.5px", color: "var(--a-text-2)", marginBottom: "6px" }}>Quantity used *</label>
-            <input type="number" min="0.01" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ width: "100%" }} required />
-          </div>
-        </>
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block", fontSize: "14.5px", color: "var(--a-text-2)", marginBottom: "6px" }}>Raw material (optional)</label>
+          <input
+            type="text"
+            value={materialNote}
+            onChange={(e) => setMaterialNote(e.target.value)}
+            placeholder="e.g. EN8 round bar, 20 kg"
+            style={{ width: "100%" }}
+          />
+        </div>
       )}
 
       <div style={{ marginBottom: "1rem" }}>
